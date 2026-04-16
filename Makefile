@@ -62,9 +62,9 @@ IPXE_BASE := https://boot.ipxe.org
 # Override with: make fetch-ipxe IPXE_DIR=/srv/tftp
 fetch-ipxe:
 	@mkdir -p $(IPXE_DIR)/arm64-efi
-	curl -fsSL -o $(IPXE_DIR)/undionly.kpxe         $(IPXE_BASE)/undionly.kpxe
-	curl -fsSL -o $(IPXE_DIR)/ipxe.efi              $(IPXE_BASE)/x86_64-efi/ipxe.efi
-	curl -fsSL -o $(IPXE_DIR)/arm64-efi/snponly.efi $(IPXE_BASE)/arm64-efi/snponly.efi
+	curl -fsSL -o $(IPXE_DIR)/undionly.kpxe    $(IPXE_BASE)/undionly.kpxe
+	curl -fsSL -o $(IPXE_DIR)/ipxe.efi         $(IPXE_BASE)/x86_64-efi/ipxe.efi
+	curl -fsSL -o $(IPXE_DIR)/snponly.efi 		 $(IPXE_BASE)/x86_64-efi/snponly.efi
 	@echo "iPXE files written to $(IPXE_DIR)"
 
 # ─── React frontend ───────────────────────────────────────────────────────────
