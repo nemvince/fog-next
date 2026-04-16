@@ -1,0 +1,50 @@
+server:
+  http: ":{{ fog_http_port }}"
+{% if fog_tls_cert != "" %}
+  https: ":{{ fog_https_port }}"
+  tls_cert: "{{ fog_tls_cert }}"
+  tls_key:  "{{ fog_tls_key }}"
+{% endif %}
+  base_url: "{{ fog_base_url | default('http://' + ansible_default_ipv4.address) }}"
+  read_timeout:  "30s"
+  write_timeout: "60s"
+
+database:
+  host:     "{{ fog_db_host }}"
+  port:     {{ fog_db_port }}
+  name:     "{{ fog_db_name }}"
+  user:     "{{ fog_db_user }}"
+  password: "{{ fog_db_password }}"
+  sslmode:  "{{ fog_db_sslmode | default('disable') }}"
+  max_open_conns:    25
+  max_idle_conns:    10
+  conn_max_lifetime: "5m"
+
+auth:
+  jwt_secret:           "{{ fog_jwt_secret if fog_jwt_secret != '' else _jwt_secret.stdout }}"
+  access_token_expiry:  "15m"
+  refresh_token_expiry: "168h"
+
+storage:
+  base_path:        "{{ fog_storage_path }}"
+  snapin_path:      "{{ fog_snapin_path }}"
+  kernel_path:      "{{ fog_kernel_path }}"
+  max_upload_bytes: 0
+
+tftp:
+  enabled:  {{ fog_tftp_enabled | lower }}
+  listen:   "{{ fog_tftp_listen }}"
+  root_dir: "{{ fog_tftp_root }}"
+
+services:
+  scheduler_interval:          "10s"
+  replicator_interval:         "5m"
+  snapin_replicator_interval:  "5m"
+  ping_interval:               "1m"
+  image_size_interval:         "1h"
+  snapin_hash_interval:        "1h"
+  multicast_interval:          "5s"
+
+log:
+  level:  "{{ fog_log_level }}"
+  format: "{{ fog_log_format }}"

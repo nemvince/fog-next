@@ -1,0 +1,46 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: fog
+      POSTGRES_USER: fog
+      POSTGRES_PASSWORD: fogpassword
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fog"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  fog:
+    image: fog-next:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "80:8080"
+      - "443:8443"
+      - "69:6969/udp"  # TFTP
+    volumes:
+      - fog_images:/opt/fog/images
+      - fog_snapins:/opt/fog/snapins
+      - fog_kernels:/opt/fog/kernels
+      - fog_tftp:/tftpboot
+      - ./config.yaml:/etc/fog/config.yaml:ro
+    environment:
+      FOG_DB_DSN: "postgres://fog:fogpassword@postgres:5432/fog?sslmode=disable"
+
+volumes:
+  postgres_data:
+  fog_images:
+  fog_snapins:
+  fog_kernels:
+  fog_tftp:

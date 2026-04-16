@@ -1,0 +1,1649 @@
+openapi: "3.1.0"
+
+info:
+  title: FOG Next API
+  description: |
+    REST API for the FOG Next network boot and imaging server.
+    Covers host management, image management, task orchestration,
+    group/snapin administration, storage nodes, users, and reporting.
+  version: "1.0.0"
+  contact:
+    name: Tamas Vince
+    url: https://vnce.eu
+  license:
+    name: GPL-3.0
+    url: https://www.gnu.org/licenses/gpl-3.0.html
+
+servers:
+  - url: /fog/api/v1
+    description: Local instance (relative)
+
+security:
+  - bearerAuth: []
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Tags
+# ──────────────────────────────────────────────────────────────────────────────
+tags:
+  - name: auth
+    description: Authentication and token management
+  - name: hosts
+    description: Managed computer endpoints
+  - name: images
+    description: Disk image management and transfer
+  - name: tasks
+    description: Imaging and maintenance task lifecycle
+  - name: groups
+    description: Host group management
+  - name: snapins
+    description: Software snapin packages
+  - name: storage
+    description: Storage groups and nodes
+  - name: users
+    description: User and role management
+  - name: settings
+    description: Global configuration key-value store
+  - name: reports
+    description: Read-only reporting and audit endpoints
+  - name: ws
+    description: WebSocket live events
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Paths
+# ──────────────────────────────────────────────────────────────────────────────
+paths:
+
+  # ── Auth ──────────────────────────────────────────────────────────────────
+
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: Obtain an access + refresh token pair
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Tokens issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenPair"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/refresh:
+    post:
+      tags: [auth]
+      summary: Exchange a refresh token for a new access token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        "200":
+          description: New token pair
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenPair"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: Revoke the current refresh token
+      responses:
+        "204":
+          description: Logged out
+
+  # ── Hosts ─────────────────────────────────────────────────────────────────
+
+  /hosts:
+    get:
+      tags: [hosts]
+      summary: List hosts
+      parameters:
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/cursorParam"
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: Search by name or IP
+      responses:
+        "200":
+          description: Host list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HostList"
+    post:
+      tags: [hosts]
+      summary: Create a host
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HostInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Host"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /hosts/{id}:
+    parameters:
+      - $ref: "#/components/parameters/uuidId"
+    get:
+      tags: [hosts]
+      summary: Get a host by ID
+      responses:
+        "200":
+          description: Host
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Host"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [hosts]
+      summary: Update a host
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HostInput"
+      responses:
+        "200":
+          description: Updated host
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Host"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [hosts]
+      summary: Delete a host
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /hosts/{id}/macs:
+    parameters:
+      - $ref: "#/components/parameters/uuidId"
+    get:
+      tags: [hosts]
+      summary: List MAC addresses for a host
+      responses:
+        "200":
+          description: MAC list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HostMAC"
+    post:
+      tags: [hosts]
+      summary: Add a MAC address to a host
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HostMACInput"
+      responses:
+        "201":
+          description: MAC added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HostMAC"
+
+  /hosts/{id}/macs/{macId}:
+    parameters:
+      - $ref: "#/components/parameters/uuidId"
+      - name: macId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      tags: [hosts]
+      summary: Remove a MAC address
+      responses:
+        "204":
+          description: Deleted
+
+  /hosts/{id}/inventory:
+    parameters:
+      - $ref: "#/components/parameters/uuidId"
+    get:
+      tags: [hosts]
+      summary: Get hardware inventory for a host
+      responses:
+        "200":
+          description: Inventory
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inventory"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /hosts/{id}/task:
+    parameters:
+      - $ref: "#/components/parameters/uuidId"
+    get:
+      tags: [hosts]
+      summary: Get the currently active task for a host
+      responses:
+        "200":
+          description: Active task or null
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /pending-macs:
+    get:
+      tags: [hosts]
+      summary: List unregistered MAC addresses awaiting approval
+      responses:
+        "200":
+          description: Pending MAC list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PendingMAC"
+
+  # ── Images ────────────────────────────────────────────────────────────────
+
+  /images:
+    get:
+      tags: [images]
+      summary: List images
+      parameters:
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/cursorParam"
+      responses:
+        "200":
+          description: Image list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImageList"
+    post:
+      tags: [images]
+      summary: Create an image record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImageInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Image"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /images/{id}:
+    parameters:
+      - $ref: "#/components/parameters/uuidId"
+    get:
+      tags: [images]
+      summary: Get an image by ID
+      responses:
+        "200":
+          description: Image
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Image"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [images]
+      summary: Update image metadata
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImageInput"
+      responses:
+        "200":
+          description: Updated image
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Image"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [images]
+      summary: Delete an image record
+      responses:
+        "204":
+          description: Deleted
+
+  /images/{id}/download:
+    parameters:
+      - $ref: "#/components/parameters/uuidId"
+    get:
+      tags: [images]
+      summary: Download the image archive
+      responses:
+        "200":
+          description: Binary image stream
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /images/{id}/upload:
+    parameters:
+      - $ref: "#/components/parameters/uuidId"
+    put:
+      tags: [images]
+      summary: Upload (replace) the image archive
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: Upload accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bytesReceived:
+                    type: integer
+                    format: int64
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ── Tasks ─────────────────────────────────────────────────────────────────
+
+  /tasks:
+    get:
+      tags: [tasks]
+      summary: List tasks
+      parameters:
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/cursorParam"
+        - name: state
+          in: query
+          schema:
+            type: string
+            enum: [queued, active, complete, failed, cancelled]
+        - name: hostId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Task list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskList"
+    post:
+      tags: [tasks]
+      summary: Create a task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /tasks/{id}:
+    parameters:
+      - $ref: "#/components/parameters/uuidId"
+    get:
+      tags: [tasks]
+      summary: Get a task by ID
+      responses:
+        "200":
+          description: Task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [tasks]
+      summary: Cancel a task
+      responses:
+        "204":
+          description: Cancelled
+
+  /tasks/{id}/progress:
+    parameters:
+      - $ref: "#/components/parameters/uuidId"
+    post:
+      tags: [tasks]
+      summary: Report task progress (called by the imaging client)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProgressUpdate"
+      responses:
+        "204":
+          description: Progress recorded
+
+  # ── Groups ────────────────────────────────────────────────────────────────
+
+  /groups:
+    get:
+      tags: [groups]
+      summary: List groups
+      responses:
+        "200":
+          description: Group list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupList"
+    post:
+      tags: [groups]
+      summary: Create a group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GroupInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Group"
+
+  /groups/{id}:
+    parameters:
+      - $ref: "#/components/parameters/uuidId"
+    get:
+      tags: [groups]
+      summary: Get a group
+      responses:
+        "200":
+          description: Group
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Group"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [groups]
+      summary: Update a group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GroupInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Group"
+    delete:
+      tags: [groups]
+      summary: Delete a group
+      responses:
+        "204":
+          description: Deleted
+
+  /groups/{id}/members:
+    parameters:
+      - $ref: "#/components/parameters/uuidId"
+    get:
+      tags: [groups]
+      summary: List group members
+      responses:
+        "200":
+          description: Member list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Host"
+    post:
+      tags: [groups]
+      summary: Add a host to a group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [hostId]
+              properties:
+                hostId:
+                  type: string
+                  format: uuid
+      responses:
+        "204":
+          description: Added
+
+  /groups/{id}/members/{hostId}:
+    parameters:
+      - $ref: "#/components/parameters/uuidId"
+      - name: hostId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      tags: [groups]
+      summary: Remove a host from a group
+      responses:
+        "204":
+          description: Removed
+
+  # ── Snapins ───────────────────────────────────────────────────────────────
+
+  /snapins:
+    get:
+      tags: [snapins]
+      summary: List snapins
+      responses:
+        "200":
+          description: Snapin list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SnapinList"
+    post:
+      tags: [snapins]
+      summary: Create a snapin record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SnapinInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Snapin"
+
+  /snapins/{id}:
+    parameters:
+      - $ref: "#/components/parameters/uuidId"
+    get:
+      tags: [snapins]
+      summary: Get a snapin
+      responses:
+        "200":
+          description: Snapin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Snapin"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [snapins]
+      summary: Update a snapin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SnapinInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Snapin"
+    delete:
+      tags: [snapins]
+      summary: Delete a snapin
+      responses:
+        "204":
+          description: Deleted
+
+  /snapins/{id}/upload:
+    parameters:
+      - $ref: "#/components/parameters/uuidId"
+    post:
+      tags: [snapins]
+      summary: Upload a snapin binary
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Uploaded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Snapin"
+
+  # ── Storage ───────────────────────────────────────────────────────────────
+
+  /storage/groups:
+    get:
+      tags: [storage]
+      summary: List storage groups
+      responses:
+        "200":
+          description: Storage group list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StorageGroup"
+    post:
+      tags: [storage]
+      summary: Create a storage group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StorageGroupInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StorageGroup"
+
+  /storage/groups/{id}:
+    parameters:
+      - $ref: "#/components/parameters/uuidId"
+    get:
+      tags: [storage]
+      summary: Get a storage group
+      responses:
+        "200":
+          description: Storage group
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StorageGroup"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [storage]
+      summary: Update a storage group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StorageGroupInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StorageGroup"
+    delete:
+      tags: [storage]
+      summary: Delete a storage group
+      responses:
+        "204":
+          description: Deleted
+
+  /storage/groups/{id}/nodes:
+    parameters:
+      - $ref: "#/components/parameters/uuidId"
+    get:
+      tags: [storage]
+      summary: List storage nodes in a group
+      responses:
+        "200":
+          description: Node list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StorageNode"
+    post:
+      tags: [storage]
+      summary: Add a storage node to a group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StorageNodeInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StorageNode"
+
+  /storage/nodes/{id}:
+    parameters:
+      - $ref: "#/components/parameters/uuidId"
+    get:
+      tags: [storage]
+      summary: Get a storage node
+      responses:
+        "200":
+          description: Node
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StorageNode"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [storage]
+      summary: Update a storage node
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StorageNodeInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StorageNode"
+    delete:
+      tags: [storage]
+      summary: Delete a storage node
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Users ─────────────────────────────────────────────────────────────────
+
+  /users:
+    get:
+      tags: [users]
+      summary: List users
+      responses:
+        "200":
+          description: User list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+    post:
+      tags: [users]
+      summary: Create a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /users/{id}:
+    parameters:
+      - $ref: "#/components/parameters/uuidId"
+    get:
+      tags: [users]
+      summary: Get a user
+      responses:
+        "200":
+          description: User
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [users]
+      summary: Update a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    delete:
+      tags: [users]
+      summary: Delete a user
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /users/{id}/regenerate-token:
+    parameters:
+      - $ref: "#/components/parameters/uuidId"
+    post:
+      tags: [users]
+      summary: Regenerate the user's API token
+      responses:
+        "200":
+          description: New token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+
+  # ── Settings ──────────────────────────────────────────────────────────────
+
+  /settings:
+    get:
+      tags: [settings]
+      summary: List settings
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Settings list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Setting"
+
+  /settings/{key}:
+    parameters:
+      - name: key
+        in: path
+        required: true
+        schema:
+          type: string
+    put:
+      tags: [settings]
+      summary: Set a setting value
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [value]
+              properties:
+                value:
+                  type: string
+      responses:
+        "204":
+          description: Updated
+    delete:
+      tags: [settings]
+      summary: Delete a setting
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Reports ───────────────────────────────────────────────────────────────
+
+  /reports/imaging:
+    get:
+      tags: [reports]
+      summary: Imaging history log
+      parameters:
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/cursorParam"
+      responses:
+        "200":
+          description: Imaging log entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ImagingLog"
+
+  /reports/inventory:
+    get:
+      tags: [reports]
+      summary: Host inventory report
+      parameters:
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/cursorParam"
+      responses:
+        "200":
+          description: Inventory entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  allOf:
+                    - $ref: "#/components/schemas/Host"
+                    - type: object
+                      properties:
+                        inventory:
+                          $ref: "#/components/schemas/Inventory"
+
+  # ── WebSocket ─────────────────────────────────────────────────────────────
+
+  /ws:
+    get:
+      tags: [ws]
+      summary: Upgrade to a WebSocket connection for live events
+      responses:
+        "101":
+          description: Switching protocols
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Components
+# ──────────────────────────────────────────────────────────────────────────────
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    uuidId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    limitParam:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+
+    cursorParam:
+      name: cursor
+      in: query
+      description: UUID of the last item from the previous page
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    Unauthorized:
+      description: Missing or invalid credentials
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    InternalError:
+      description: Unexpected server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  schemas:
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+          format: password
+
+    TokenPair:
+      type: object
+      properties:
+        token:
+          type: string
+        refreshToken:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+
+    Host:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+        description:
+          type: string
+        ip:
+          type: string
+        imageId:
+          type: string
+          format: uuid
+          nullable: true
+        kernel:
+          type: string
+        init:
+          type: string
+        kernelArgs:
+          type: string
+        isEnabled:
+          type: boolean
+        useAad:
+          type: boolean
+        useWol:
+          type: boolean
+        lastContact:
+          type: string
+          format: date-time
+          nullable: true
+        deployedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        macs:
+          type: array
+          items:
+            $ref: "#/components/schemas/HostMAC"
+          readOnly: true
+
+    HostInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        ip:
+          type: string
+        imageId:
+          type: string
+          format: uuid
+          nullable: true
+        kernel:
+          type: string
+        init:
+          type: string
+        kernelArgs:
+          type: string
+        isEnabled:
+          type: boolean
+        useAad:
+          type: boolean
+        useWol:
+          type: boolean
+
+    HostList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Host"
+        total:
+          type: integer
+
+    HostMAC:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        hostId:
+          type: string
+          format: uuid
+        mac:
+          type: string
+        description:
+          type: string
+        isPrimary:
+          type: boolean
+        isIgnored:
+          type: boolean
+
+    HostMACInput:
+      type: object
+      required: [mac]
+      properties:
+        mac:
+          type: string
+        description:
+          type: string
+        isPrimary:
+          type: boolean
+
+    PendingMAC:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        mac:
+          type: string
+        firstSeen:
+          type: string
+          format: date-time
+
+    Inventory:
+      type: object
+      properties:
+        cpuModel:
+          type: string
+        cpuCores:
+          type: integer
+        cpuFreqMhz:
+          type: number
+        ramMib:
+          type: integer
+        hdModel:
+          type: string
+        hdSizeGb:
+          type: number
+        manufacturer:
+          type: string
+        product:
+          type: string
+        serial:
+          type: string
+        uuid:
+          type: string
+        biosVersion:
+          type: string
+        osName:
+          type: string
+
+    Image:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+        description:
+          type: string
+        path:
+          type: string
+        isEnabled:
+          type: boolean
+        toReplicate:
+          type: boolean
+        sizeBytes:
+          type: integer
+          format: int64
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+
+    ImageInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        path:
+          type: string
+        isEnabled:
+          type: boolean
+        toReplicate:
+          type: boolean
+
+    ImageList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Image"
+        total:
+          type: integer
+
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        hostId:
+          type: string
+          format: uuid
+        imageId:
+          type: string
+          format: uuid
+          nullable: true
+        type:
+          type: string
+          enum:
+            - deploy
+            - capture
+            - multicast
+            - debug_deploy
+            - debug_capture
+            - wipe
+            - memtest
+            - disk_test
+            - av_scan
+            - snapin_install
+        state:
+          type: string
+          enum: [queued, active, complete, failed, cancelled]
+        progressPercent:
+          type: number
+        progressBytes:
+          type: integer
+          format: int64
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+
+    TaskInput:
+      type: object
+      required: [hostId, type]
+      properties:
+        hostId:
+          type: string
+          format: uuid
+        imageId:
+          type: string
+          format: uuid
+          nullable: true
+        type:
+          type: string
+          enum:
+            - deploy
+            - capture
+            - multicast
+            - debug_deploy
+            - debug_capture
+            - wipe
+            - memtest
+
+    TaskList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Task"
+        total:
+          type: integer
+
+    ProgressUpdate:
+      type: object
+      properties:
+        progressPercent:
+          type: number
+          minimum: 0
+          maximum: 100
+        progressBytes:
+          type: integer
+          format: int64
+
+    Group:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+
+    GroupInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+
+    GroupList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Group"
+        total:
+          type: integer
+
+    Snapin:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+        description:
+          type: string
+        file:
+          type: string
+        isEnabled:
+          type: boolean
+        toReplicate:
+          type: boolean
+        sizeBytes:
+          type: integer
+          format: int64
+
+    SnapinInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        isEnabled:
+          type: boolean
+        toReplicate:
+          type: boolean
+
+    SnapinList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Snapin"
+        total:
+          type: integer
+
+    StorageGroup:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+        description:
+          type: string
+
+    StorageGroupInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+
+    StorageNode:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        groupId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        host:
+          type: string
+        path:
+          type: string
+        isMaster:
+          type: boolean
+        isEnabled:
+          type: boolean
+        bandwidthLimit:
+          type: integer
+          description: Replication bandwidth limit in Mbps (0 = unlimited)
+
+    StorageNodeInput:
+      type: object
+      required: [name, host, path]
+      properties:
+        name:
+          type: string
+        host:
+          type: string
+        path:
+          type: string
+        isMaster:
+          type: boolean
+        isEnabled:
+          type: boolean
+        bandwidthLimit:
+          type: integer
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [admin, readonly]
+        isActive:
+          type: boolean
+        lastLoginAt:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+
+    UserInput:
+      type: object
+      required: [username, role]
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        role:
+          type: string
+          enum: [admin, readonly]
+        isActive:
+          type: boolean
+
+    Setting:
+      type: object
+      properties:
+        key:
+          type: string
+        value:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+
+    ImagingLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        hostId:
+          type: string
+          format: uuid
+        taskId:
+          type: string
+          format: uuid
+        taskType:
+          type: string
+        sizeBytes:
+          type: integer
+          format: int64
+        duration:
+          type: integer
+          description: Duration in seconds
+        createdAt:
+          type: string
+          format: date-time

@@ -1,0 +1,12 @@
+---
+# System packages required by FOG Next
+fog_packages_debian:
+  - postgresql-client
+  - rsync
+  - tftp-hpa  # for TFTP if not using built-in
+  - curl
+
+fog_packages_redhat:
+  - postgresql
+  - rsync
+  - curl

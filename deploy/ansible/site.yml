@@ -1,0 +1,35 @@
+# FOG Next — Ansible Role
+#
+# Usage:
+#   ansible-playbook -i inventory deploy/ansible/site.yml
+#
+# Variables (set in group_vars or host_vars):
+#   fog_version:          "latest"
+#   fog_db_host:          "localhost"
+#   fog_db_port:          5432
+#   fog_db_name:          "fog"
+#   fog_db_user:          "fog"
+#   fog_db_password:      "change_me"           # use vault!
+#   fog_admin_user:       "fog"
+#   fog_admin_password:   "change_me"           # use vault!
+#   fog_http_port:        80
+#   fog_https_port:       443
+#   fog_storage_path:     "/opt/fog/images"
+#   fog_snapin_path:      "/opt/fog/snapins"
+#   fog_jwt_secret:       ""   # auto-generated when empty
+#   fog_tls_cert:         ""
+#   fog_tls_key:          ""
+
+- name: Install and configure FOG Next
+  hosts: fog_servers
+  become: true
+
+  pre_tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+
+  roles:
+    - role: fog_next

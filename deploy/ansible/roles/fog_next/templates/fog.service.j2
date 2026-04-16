@@ -1,0 +1,29 @@
+[Unit]
+Description=FOG Next — Network Boot and Imaging Server
+After=network.target postgresql.service
+Wants=network.target
+
+[Service]
+Type=simple
+User=fog
+Group=fog
+ExecStart={{ fog_install_dir }}/bin/fog serve --config {{ fog_config_file }}
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=30s
+
+# Security hardening
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths={{ fog_storage_path }} {{ fog_snapin_path }} {{ fog_tftp_root }}
+
+# Allow binding low ports if needed (< 1024)
+{% if fog_http_port | int < 1024 or fog_https_port | int < 1024 or fog_tftp_enabled %}
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+{% endif %}
+
+[Install]
+WantedBy=multi-user.target

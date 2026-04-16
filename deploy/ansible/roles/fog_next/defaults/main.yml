@@ -1,0 +1,43 @@
+---
+# FOG Next Ansible role defaults
+fog_version: "latest"
+
+# PostgreSQL
+fog_db_host: "localhost"
+fog_db_port: 5432
+fog_db_name: "fog"
+fog_db_user: "fog"
+fog_db_password: "change_me"  # override with vault
+
+# Admin user (only used on first install)
+fog_admin_user: "fog"
+fog_admin_password: "change_me"  # override with vault
+
+# HTTP server
+fog_http_port: 80
+fog_https_port: 443
+fog_tls_cert: ""
+fog_tls_key: ""
+
+# Storage
+fog_storage_path: "/opt/fog/images"
+fog_snapin_path: "/opt/fog/snapins"
+fog_kernel_path: "/opt/fog/kernels"
+
+# TFTP
+fog_tftp_enabled: true
+fog_tftp_listen: ":69"
+fog_tftp_root: "/tftpboot"
+
+# JWT secret (generated if empty)
+fog_jwt_secret: ""
+
+# Logging
+fog_log_level: "info"
+fog_log_format: "json"
+
+# Installation paths
+fog_install_dir: "/opt/fog-next"
+fog_config_dir: "/etc/fog"
+fog_config_file: "/etc/fog/config.yaml"
+fog_binary_url_base: "https://github.com/nemvince/fog-next/releases/download"

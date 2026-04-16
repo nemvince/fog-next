@@ -1,0 +1,128 @@
+---
+- name: Install system packages (Debian/Ubuntu)
+  ansible.builtin.apt:
+    name: "{{ fog_packages_debian }}"
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: Install system packages (RedHat/CentOS)
+  ansible.builtin.dnf:
+    name: "{{ fog_packages_redhat }}"
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Create fog group
+  ansible.builtin.group:
+    name: fog
+    system: true
+
+- name: Create fog user
+  ansible.builtin.user:
+    name: fog
+    group: fog
+    system: true
+    shell: /usr/sbin/nologin
+    home: "{{ fog_install_dir }}"
+    create_home: false
+
+- name: Create installation directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: fog
+    group: fog
+    mode: "0750"
+  loop:
+    - "{{ fog_install_dir }}"
+    - "{{ fog_install_dir }}/bin"
+    - "{{ fog_config_dir }}"
+    - "{{ fog_storage_path }}"
+    - "{{ fog_snapin_path }}"
+    - "{{ fog_kernel_path }}"
+    - "{{ fog_tftp_root }}"
+
+- name: Download fog binary
+  ansible.builtin.get_url:
+    url: "{{ fog_binary_url_base }}/{{ fog_version }}/fog-linux-amd64"
+    dest: "{{ fog_install_dir }}/bin/fog"
+    owner: fog
+    group: fog
+    mode: "0755"
+  when: fog_version != "latest" or fog_binary_url_base != ""
+  notify: restart fog
+
+- name: Generate JWT secret
+  ansible.builtin.command:
+    cmd: /usr/bin/openssl rand -hex 32
+  register: _jwt_secret
+  changed_when: false
+  when: fog_jwt_secret == ""
+
+- name: Write fog configuration
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: "{{ fog_config_file }}"
+    owner: fog
+    group: fog
+    mode: "0640"
+  notify: restart fog
+
+- name: Run database migrations
+  ansible.builtin.command:
+    cmd: "{{ fog_install_dir }}/bin/fog migrate up --config {{ fog_config_file }}"
+  become: true
+  become_user: fog
+  register: _migrate_result
+  changed_when: "'no change' not in _migrate_result.stdout"
+  failed_when: _migrate_result.rc != 0
+
+- name: Install systemd unit
+  ansible.builtin.template:
+    src: fog.service.j2
+    dest: /etc/systemd/system/fog.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - reload systemd
+    - restart fog
+
+- name: Enable and start fog service
+  ansible.builtin.systemd:
+    name: fog
+    enabled: true
+    state: started
+
+- name: Open HTTP firewall port (firewalld)
+  ansible.posix.firewalld:
+    port: "{{ fog_http_port }}/tcp"
+    permanent: true
+    state: enabled
+    immediate: true
+  when:
+    - ansible_os_family == "RedHat"
+    - fog_http_port | int != 0
+  ignore_errors: true  # may not have firewalld
+
+- name: Open HTTPS firewall port (firewalld)
+  ansible.posix.firewalld:
+    port: "{{ fog_https_port }}/tcp"
+    permanent: true
+    state: enabled
+    immediate: true
+  when:
+    - ansible_os_family == "RedHat"
+    - fog_https_port | int != 0
+    - fog_tls_cert != ""
+  ignore_errors: true
+
+- name: Open TFTP firewall port (firewalld)
+  ansible.posix.firewalld:
+    port: "69/udp"
+    permanent: true
+    state: enabled
+    immediate: true
+  when:
+    - ansible_os_family == "RedHat"
+    - fog_tftp_enabled
+  ignore_errors: true

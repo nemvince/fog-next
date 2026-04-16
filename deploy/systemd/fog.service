@@ -1,0 +1,32 @@
+[Unit]
+Description=FOG Network Boot and Imaging Server
+Documentation=https://github.com/nemvince/fog-next
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=fog
+Group=fog
+ExecStart=/usr/local/bin/fog serve --config /etc/fog/config.yaml
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=5s
+
+# Directories
+WorkingDirectory=/var/lib/fog
+RuntimeDirectory=fog
+StateDirectory=fog
+LogsDirectory=fog
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/fog /var/lib/fog /tftpboot
+# Allow binding to port 69 (TFTP) and 80/443
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "develop"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  # ─── Go backend ───────────────────────────────────────────────────────────
+  go:
+    name: Go build & vet
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: fog
+          POSTGRES_PASSWORD: fog
+          POSTGRES_DB: fog
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fog"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Download modules
+        run: go mod download
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: Build
+        run: go build ./...
+
+      - name: staticcheck
+        uses: dominikh/staticcheck-action@v1
+        with:
+          version: latest
+          install-go: false
+
+      - name: Test
+        run: go test -race -timeout 120s ./...
+        env:
+          FOG_DATABASE_HOST: localhost
+          FOG_DATABASE_PORT: 5432
+          FOG_DATABASE_NAME: fog
+          FOG_DATABASE_USER: fog
+          FOG_DATABASE_PASSWORD: fog
+          FOG_DATABASE_SSLMODE: disable
+
+  # ─── React frontend ───────────────────────────────────────────────────────
+  frontend:
+    name: Frontend build & type-check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        working-directory: web
+        run: bun install --frozen-lockfile
+
+      - name: Type-check & build
+        working-directory: web
+        run: bun run build
