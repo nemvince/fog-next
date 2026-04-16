@@ -36,8 +36,9 @@ export const api = {
 // ─── Auth ────────────────────────────────────────────────────────────────────
 
 export interface LoginResponse {
-  token: string
+  accessToken: string
   refreshToken: string
+  expiresAt: string
 }
 
 export const authApi = {
