@@ -33,7 +33,6 @@ services:
       - fog_images:/opt/fog/images
       - fog_snapins:/opt/fog/snapins
       - fog_kernels:/opt/fog/kernels
-      - fog_tftp:/tftpboot
       - ./config.yaml:/etc/fog/config.yaml:ro
     environment:
       FOG_DB_DSN: "postgres://fog:fogpassword@postgres:5432/fog?sslmode=disable"
@@ -43,4 +42,3 @@ volumes:
   fog_images:
   fog_snapins:
   fog_kernels:
-  fog_tftp:

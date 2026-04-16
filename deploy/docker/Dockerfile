@@ -13,10 +13,23 @@ COPY . .
 COPY --from=web-builder /web/dist ./internal/api/static/
 RUN CGO_ENABLED=0 go build -ldflags "-s -w" -o /fog ./cmd/fog
 
+# Download iPXE boot files.
+# undionly.kpxe  — legacy BIOS PXE
+# ipxe.efi       — UEFI x86-64
+# snponly.efi    — UEFI ARM64 (via snponly which avoids driver conflicts)
+FROM alpine:3.20 AS ipxe-fetcher
+RUN apk add --no-cache curl
+RUN mkdir -p /tftpboot && \
+    curl -fsSL -o /tftpboot/undionly.kpxe    https://boot.ipxe.org/undionly.kpxe    && \
+    curl -fsSL -o /tftpboot/ipxe.efi         https://boot.ipxe.org/ipxe.efi         && \
+    curl -fsSL -o /tftpboot/arm64-efi/snponly.efi \
+         --create-dirs https://boot.ipxe.org/arm64-efi/snponly.efi
+
 FROM alpine:3.20
 RUN apk add --no-cache ca-certificates tzdata
 COPY --from=builder /fog /usr/local/bin/fog
-RUN mkdir -p /etc/fog /opt/fog/images /opt/fog/snapins /opt/fog/kernels /tftpboot
+COPY --from=ipxe-fetcher /tftpboot /tftpboot
+RUN mkdir -p /etc/fog /opt/fog/images /opt/fog/snapins /opt/fog/kernels
 EXPOSE 8080 8443 6969/udp
 ENTRYPOINT ["/usr/local/bin/fog"]
 CMD ["serve"]
