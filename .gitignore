@@ -1,5 +1,8 @@
 # built binary
 /fog
 
+# built frontend
+internal/api/static/*
+
 # IDE settings
 .vscode

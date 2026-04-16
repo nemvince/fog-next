@@ -53,8 +53,9 @@ docker-down:
 
 web-build:
 	@if [ -f $(WEB_DIR)/package.json ]; then \
-		cd $(WEB_DIR) && bun install --frozen-lockfile && bun run build && \
-		cp -r dist/* ../internal/api/static/; \
+		(cd $(WEB_DIR) && bun install --frozen-lockfile && bun run build); \
+		find internal/api/static -mindepth 1 ! -name '.gitkeep' -delete; \
+		cp -r $(WEB_DIR)/dist/. internal/api/static/; \
 	fi
 
 web-dev:
