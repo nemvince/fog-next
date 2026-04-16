@@ -26,9 +26,9 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "80:8080"
-      - "443:8443"
-      - "69:6969/udp"  # TFTP
+      - "80:80"
+      - "443:443"
+      - "69:69/udp"  # TFTP
     volumes:
       - fog_images:/opt/fog/images
       - fog_snapins:/opt/fog/snapins
