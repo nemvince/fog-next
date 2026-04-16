@@ -1,7 +1,6 @@
 # fog-next configuration example
 # Copy to /etc/fog/config.yaml and adjust to your environment.
-# All values shown are defaults. Environment variable overrides use the
-# FOG_ prefix with dots replaced by underscores, e.g. FOG_DATABASE_PASSWORD.
+# All values shown are defaults.
 
 # ─── HTTP server ────────────────────────────────────────────────────────────
 

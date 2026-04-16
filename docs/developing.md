@@ -45,20 +45,6 @@ go build -o build/fog ./cmd/fog
 The Go server can be started without pre-building the frontend — it will serve the last embedded build (or an empty `/` if none exists).
 
 ```bash
-# Minimal config via environment variables
-export FOG_DATABASE_HOST=localhost
-export FOG_DATABASE_USER=fog
-export FOG_DATABASE_PASSWORD=fog
-export FOG_DATABASE_NAME=fog
-export FOG_AUTH_JWT_SECRET=dev-secret-change-me
-export FOG_SERVER_HTTP=:8080        # avoid needing sudo for port 80
-
-go run ./cmd/fog serve
-```
-
-Or use a local config file:
-
-```bash
 cp deploy/config.example.yaml config.yaml
 # Edit config.yaml …
 go run ./cmd/fog serve -c config.yaml
@@ -263,29 +249,6 @@ deploy/
 api/
   openapi.yaml            OpenAPI 3.1 specification
 ```
-
----
-
-## Environment variables reference
-
-All config keys can be overridden with `FOG_` + the uppercased dotted path, replacing `.` with `_`.
-
-| Variable | Example | Description |
-|----------|---------|-------------|
-| `FOG_DATABASE_HOST` | `localhost` | PostgreSQL host |
-| `FOG_DATABASE_PORT` | `5432` | PostgreSQL port |
-| `FOG_DATABASE_NAME` | `fog` | Database name |
-| `FOG_DATABASE_USER` | `fog` | Database user |
-| `FOG_DATABASE_PASSWORD` | `secret` | Database password |
-| `FOG_SERVER_HTTP` | `:8080` | HTTP listen address |
-| `FOG_SERVER_HTTPS` | `:8443` | HTTPS listen address |
-| `FOG_AUTH_JWT_SECRET` | `changeme` | JWT signing secret |
-| `FOG_STORAGE_BASE_PATH` | `/opt/fog/images` | Image storage root |
-| `FOG_TFTP_ROOT_DIR` | `/tftpboot` | TFTP root |
-| `FOG_LOG_LEVEL` | `debug` | Log level (debug/info/warn/error) |
-| `FOG_E2E_BASE_URL` | `http://localhost:5173` | Playwright target base URL |
-| `FOG_E2E_USER` | `fog` | Playwright test username |
-| `FOG_E2E_PASS` | `password` | Playwright test password |
 
 ---
 

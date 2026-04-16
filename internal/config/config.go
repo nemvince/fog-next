@@ -1,12 +1,11 @@
 // Package config handles loading and validating application configuration
-// from YAML files, environment variables, and CLI flags.
+// from YAML files and CLI flags.
 package config
 
 import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -105,8 +104,8 @@ type LogConfig struct {
 }
 
 // Load reads configuration from the given file path (or the default search
-// paths when filePath is empty), falling back to environment variables
-// prefixed with FOG_.
+// paths when filePath is empty). Settings not present in the file fall back
+// to built-in defaults.
 func Load(filePath string) (*Config, error) {
 	v := viper.New()
 	setDefaults(v)
@@ -122,14 +121,8 @@ func Load(filePath string) (*Config, error) {
 		v.AddConfigPath("/etc/fog")
 		v.AddConfigPath("$HOME/.fog")
 		v.AddConfigPath(".")
-		_ = v.ReadInConfig() // not found is fine — defaults + env vars cover it
+		_ = v.ReadInConfig() // not found is fine — defaults cover it
 	}
-
-	v.SetEnvPrefix("FOG")
-	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	v.AutomaticEnv()
-	// FOG_DB_DSN is a short-form alias for database.dsn.
-	_ = v.BindEnv("database.dsn", "FOG_DB_DSN", "FOG_DATABASE_DSN")
 
 	var cfg Config
 	if err := v.Unmarshal(&cfg); err != nil {

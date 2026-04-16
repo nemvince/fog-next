@@ -112,7 +112,6 @@ Configuration is loaded from (in priority order):
 1. `/etc/fog/config.yaml`
 2. `$HOME/.fog/config.yaml`
 3. `./config.yaml`
-4. Environment variables prefixed `FOG_` (e.g. `FOG_DATABASE_PASSWORD`)
 
 See [`deploy/config.example.yaml`](deploy/config.example.yaml) for the full reference with inline comments.
 
