@@ -104,9 +104,9 @@ type LogConfig struct {
 	Format string `mapstructure:"format"` // "json" or "text"
 }
 
-// Load reads configuration from the given file path, falling back to
-// environment variables prefixed with FOG_. Callers may pass an empty
-// filePath to use only env vars and defaults.
+// Load reads configuration from the given file path (or the default search
+// paths when filePath is empty), falling back to environment variables
+// prefixed with FOG_.
 func Load(filePath string) (*Config, error) {
 	v := viper.New()
 	setDefaults(v)
@@ -116,11 +116,20 @@ func Load(filePath string) (*Config, error) {
 		if err := v.ReadInConfig(); err != nil {
 			return nil, fmt.Errorf("reading config file %q: %w", filePath, err)
 		}
+	} else {
+		v.SetConfigName("config")
+		v.SetConfigType("yaml")
+		v.AddConfigPath("/etc/fog")
+		v.AddConfigPath("$HOME/.fog")
+		v.AddConfigPath(".")
+		_ = v.ReadInConfig() // not found is fine — defaults + env vars cover it
 	}
 
 	v.SetEnvPrefix("FOG")
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
+	// FOG_DB_DSN is a short-form alias for database.dsn.
+	_ = v.BindEnv("database.dsn", "FOG_DB_DSN", "FOG_DATABASE_DSN")
 
 	var cfg Config
 	if err := v.Unmarshal(&cfg); err != nil {

@@ -18,7 +18,6 @@ import (
 	"syscall"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
 	"github.com/nemvince/fog-next/internal/api"
 	"github.com/nemvince/fog-next/internal/auth"
@@ -46,9 +45,6 @@ func rootCmd() *cobra.Command {
 	root := &cobra.Command{
 		Use:   "fog",
 		Short: "FOG Next — network boot and imaging server",
-		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
-			return initConfig()
-		},
 	}
 	root.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default: /etc/fog/config.yaml)")
 	root.AddCommand(serveCmd(), migrateCmd(), installCmd(), migrateLegacyCmd(), versionCmd())
@@ -350,20 +346,6 @@ func versionCmd() *cobra.Command {	return &cobra.Command{
 }
 
 // ---------------------------------------------------------------- helpers ---
-
-func initConfig() error {
-	if cfgFile != "" {
-		viper.SetConfigFile(cfgFile)
-	} else {
-		viper.AddConfigPath("/etc/fog")
-		viper.AddConfigPath("$HOME/.fog")
-		viper.AddConfigPath(".")
-		viper.SetConfigName("config")
-	}
-	viper.AutomaticEnv()
-	_ = viper.ReadInConfig() // ignore "not found" — defaults cover it
-	return nil
-}
 
 func mustConfig() *config.Config {
 	cfg, err := config.Load(cfgFile)
