@@ -251,6 +251,14 @@ func (s *Server) buildRouter() *chi.Mux {
 		handlers.NewBoot(s.cfg, s.store).ServeHTTP(w, req)
 	})
 
+	// Kernel/initrd file server — iPXE scripts reference these URLs to load
+	// the FOG kernel and init image over HTTP.
+	kernelPath := s.cfg.Storage.KernelPath
+	if kernelPath == "" {
+		kernelPath = "/opt/fog/kernels"
+	}
+	r.Handle("/fog/kernel/*", http.StripPrefix("/fog/kernel", http.FileServer(http.Dir(kernelPath))))
+
 	// ── Static SPA (served last so API routes take priority) ────────
 	static, _ := fs.Sub(embeddedStatic, "static")
 	r.Handle("/*", spaHandler(http.FS(static)))
