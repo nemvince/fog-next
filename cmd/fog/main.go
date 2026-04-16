@@ -201,43 +201,15 @@ func runMigrateStatus(_ *cobra.Command, _ []string) error {
 func installCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "install",
-		Short: "Interactive first-run setup wizard",
+		Short: "Create an admin user if one does not already exist",
 		RunE:  runInstall,
 	}
 }
 
 func runInstall(_ *cobra.Command, _ []string) error {
-	fmt.Println("FOG Next Installation Wizard")
-	fmt.Println("============================")
-	fmt.Println()
-
-	cfg := config.Defaults()
-	cfg.Database.Host = prompt("PostgreSQL host", "localhost")
-	cfg.Database.Port = promptInt("PostgreSQL port", 5432)
-	cfg.Database.Name = prompt("Database name", "fog")
-	cfg.Database.User = prompt("Database user", "fog")
-	cfg.Database.Password = promptPassword("Database password")
-	cfg.Server.HTTP = prompt("HTTP listen address", ":80")
-	cfg.Storage.BasePath = prompt("Image storage root", "/opt/fog/images")
-	cfg.Storage.SnapinPath = prompt("Snapin storage root", "/opt/fog/snapins")
-
-	adminUser := prompt("Admin username", "fog")
-	adminPass := promptPassword("Admin password")
-	if adminPass == "" {
-		return fmt.Errorf("admin password must not be empty")
-	}
-
-	// Generate a random JWT secret
-	secret, _ := auth.GenerateAPIToken()
-	cfg.Auth.JWTSecret = secret
-
-	if err := config.WriteDefault(cfg, "/etc/fog/config.yaml"); err != nil {
-		return fmt.Errorf("write config: %w", err)
-	}
-	fmt.Println("\nConfig written to /etc/fog/config.yaml")
-
-	// Run migrations
+	cfg := mustConfig()
 	ctx := context.Background()
+
 	db, err := database.Connect(ctx, cfg.Database)
 	if err != nil {
 		return fmt.Errorf("database connect: %w", err)
@@ -247,27 +219,44 @@ func runInstall(_ *cobra.Command, _ []string) error {
 	if err := db.MigrateUp(); err != nil {
 		return fmt.Errorf("migrations: %w", err)
 	}
-	fmt.Println("Schema created successfully.")
 
-	// Seed the admin user
+	st := postgres.New(db)
+	existing, err := st.Users().ListUsers(ctx)
+	if err != nil {
+		return fmt.Errorf("list users: %w", err)
+	}
+	for _, u := range existing {
+		if u.Role == models.RoleAdmin {
+			fmt.Printf("Admin user %q already exists — nothing to do.\n", u.Username)
+			return nil
+		}
+	}
+
+	fmt.Print("Admin username [fog]: ")
+	var adminUser string
+	_, _ = fmt.Scanln(&adminUser)
+	if adminUser == "" {
+		adminUser = "fog"
+	}
+
+	adminPass := promptPassword("Admin password")
+	if adminPass == "" {
+		return fmt.Errorf("admin password must not be empty")
+	}
+
 	hash, err := auth.HashPassword(adminPass)
 	if err != nil {
 		return fmt.Errorf("hash password: %w", err)
 	}
-	st := postgres.New(db)
-	adminModel := &models.User{
+	if err := st.Users().CreateUser(ctx, &models.User{
 		Username:     adminUser,
 		PasswordHash: hash,
 		Role:         models.RoleAdmin,
 		IsActive:     true,
-	}
-	if err := st.Users().CreateUser(ctx, adminModel); err != nil {
+	}); err != nil {
 		return fmt.Errorf("create admin user: %w", err)
 	}
 	fmt.Printf("Admin user %q created.\n", adminUser)
-
-	fmt.Println("\nInstallation complete!")
-	fmt.Println("Start the server with: fog serve")
 	return nil
 }
 
@@ -367,25 +356,6 @@ func setupLogger(cfg *config.Config) {
 		level = slog.LevelError
 	}
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: level})))
-}
-
-func prompt(label, defaultVal string) string {
-	fmt.Printf("  %s [%s]: ", label, defaultVal)
-	var v string
-	_, _ = fmt.Scanln(&v)
-	if v == "" {
-		return defaultVal
-	}
-	return v
-}
-
-func promptInt(label string, defaultVal int) int {
-	fmt.Printf("  %s [%d]: ", label, defaultVal)
-	var v int
-	if _, err := fmt.Scan(&v); err != nil || v == 0 {
-		return defaultVal
-	}
-	return v
 }
 
 func promptPassword(label string) string {
