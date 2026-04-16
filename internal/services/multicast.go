@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	multicastStateStarting = "starting"
+	multicastStatePending  = "pending"
 	multicastStateRunning  = "running"
 	multicastStateDone     = "done"
 	multicastStateFailed   = "failed"
@@ -56,7 +56,7 @@ func (m *MulticastManager) processQueued(ctx context.Context) {
 
 	for _, sess := range sessions {
 		// Only launch sessions that haven't been started yet.
-		if sess.State != multicastStateStarting && sess.State != multicastStateRunning {
+		if sess.State == multicastStatePending {
 			if err := m.launchSession(ctx, sess); err != nil {
 				slog.Error("multicast: launch session", "session", sess.ID, "error", err)
 			}

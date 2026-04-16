@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/nemvince/fog-next/internal/api/middleware"
 	"github.com/nemvince/fog-next/internal/api/response"
 	"github.com/nemvince/fog-next/internal/models"
@@ -57,7 +58,7 @@ func (h *Tasks) Create(w http.ResponseWriter, r *http.Request) {
 	if !response.Decode(w, r, &task) {
 		return
 	}
-	if task.HostID.String() == "" {
+	if task.HostID == uuid.Nil {
 		response.BadRequest(w, "hostId is required")
 		return
 	}

@@ -32,7 +32,7 @@ func (s *TaskScheduler) Run(ctx context.Context) error {
 	defer ticker.Stop()
 
 	// Also run the cron engine for ScheduledTask entries.
-	cr := cron.New(cron.WithSeconds())
+	cr := cron.New()
 	cr.Start()
 	defer cr.Stop()
 

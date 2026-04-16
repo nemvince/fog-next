@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/nemvince/fog-next/internal/config"
 	"github.com/nemvince/fog-next/internal/store"
 )
@@ -55,15 +56,16 @@ func (p *PingHosts) pingAll(ctx context.Context) {
 		}
 
 		wg.Add(1)
-		go func(ip, hostname string) {
+		go func(id uuid.UUID, ip, hostname string) {
 			defer wg.Done()
 			sem <- struct{}{}
 			defer func() { <-sem }()
 
 			if tcpPing(ctx, ip) {
 				slog.Debug("pinghosts: host reachable", "host", hostname, "ip", ip)
+				_ = p.store.Hosts().UpdateLastContact(ctx, id)
 			}
-		}(h.IP, h.Name)
+		}(h.ID, h.IP, h.Name)
 	}
 
 	wg.Wait()
