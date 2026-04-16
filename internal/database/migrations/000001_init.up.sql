@@ -11,7 +11,7 @@ CREATE EXTENSION IF NOT EXISTS "citext";     -- case-insensitive text
 -- --------------------------------------------------------
 -- Enums / domain types
 -- --------------------------------------------------------
-CREATE TYPE user_role AS ENUM ('admin', 'readonly');
+CREATE TYPE user_role AS ENUM ('admin', 'mobile', 'readonly');
 CREATE TYPE task_type AS ENUM (
     'deploy', 'capture', 'multicast',
     'debug_deploy', 'debug_capture',
@@ -27,9 +27,7 @@ CREATE TYPE task_state AS ENUM (
 -- --------------------------------------------------------
 CREATE TABLE os_types (
     id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    name        TEXT        NOT NULL UNIQUE,
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    name        TEXT        NOT NULL UNIQUE
 );
 
 INSERT INTO os_types (name) VALUES
@@ -56,8 +54,7 @@ INSERT INTO os_types (name) VALUES
 CREATE TABLE image_types (
     id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     name        TEXT        NOT NULL UNIQUE,
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    description TEXT        NOT NULL DEFAULT ''
 );
 
 INSERT INTO image_types (name) VALUES
@@ -73,7 +70,7 @@ INSERT INTO image_types (name) VALUES
 CREATE TABLE storage_groups (
     id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     name        TEXT        NOT NULL UNIQUE,
-    max_clients INT         NOT NULL DEFAULT 10,
+    description TEXT        NOT NULL DEFAULT '',
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -84,6 +81,7 @@ CREATE TABLE storage_groups (
 CREATE TABLE storage_nodes (
     id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     name             TEXT        NOT NULL,
+    description      TEXT        NOT NULL DEFAULT '',
     hostname         TEXT        NOT NULL,
     root_path        TEXT        NOT NULL DEFAULT '/images',
     web_root         TEXT        NOT NULL DEFAULT '/images',
@@ -92,7 +90,6 @@ CREATE TABLE storage_nodes (
     is_master        BOOLEAN     NOT NULL DEFAULT FALSE,
     max_clients      INT         NOT NULL DEFAULT 10,
     ssh_user         TEXT        NOT NULL DEFAULT 'fog',
-    bandwidth_limit  INT         NOT NULL DEFAULT 0,
     created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -106,14 +103,15 @@ CREATE TABLE images (
     id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     name             TEXT        NOT NULL UNIQUE,
     description      TEXT        NOT NULL DEFAULT '',
-    file_path        TEXT        NOT NULL DEFAULT '',
+    path             TEXT        NOT NULL DEFAULT '',
     os_type_id       UUID        REFERENCES os_types(id) ON DELETE SET NULL,
     image_type_id    UUID        REFERENCES image_types(id) ON DELETE SET NULL,
     storage_group_id UUID        REFERENCES storage_groups(id) ON DELETE SET NULL,
     size_bytes       BIGINT      NOT NULL DEFAULT 0,
     is_enabled       BOOLEAN     NOT NULL DEFAULT TRUE,
-    compress_ratio   INT         NOT NULL DEFAULT 6,
-    partition_scheme TEXT        NOT NULL DEFAULT 'auto',   -- auto | mbr | gpt
+    to_replicate     BOOLEAN     NOT NULL DEFAULT FALSE,
+    partitions       JSONB,
+    created_by       TEXT        NOT NULL DEFAULT '',
     created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -150,8 +148,10 @@ CREATE TABLE host_macs (
     id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     host_id     UUID        NOT NULL REFERENCES hosts(id) ON DELETE CASCADE,
     mac         CITEXT      NOT NULL,
+    description TEXT        NOT NULL DEFAULT '',
     is_primary  BOOLEAN     NOT NULL DEFAULT FALSE,
-    seen_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    is_ignored  BOOLEAN     NOT NULL DEFAULT FALSE,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT uq_host_macs_mac UNIQUE (mac)
 );
 
@@ -164,6 +164,7 @@ CREATE INDEX idx_host_macs_mac ON host_macs(mac);
 CREATE TABLE pending_macs (
     id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     mac         CITEXT      NOT NULL UNIQUE,
+    host_id     UUID        REFERENCES hosts(id) ON DELETE SET NULL,
     seen_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -174,9 +175,7 @@ CREATE TABLE groups (
     id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     name        TEXT        NOT NULL UNIQUE,
     description TEXT        NOT NULL DEFAULT '',
-    image_id    UUID        REFERENCES images(id) ON DELETE SET NULL,
-    kernel      TEXT        NOT NULL DEFAULT '',
-    kernel_args TEXT        NOT NULL DEFAULT '',
+    created_by  TEXT        NOT NULL DEFAULT '',
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -185,9 +184,10 @@ CREATE TABLE groups (
 -- Group members
 -- --------------------------------------------------------
 CREATE TABLE group_members (
+    id          UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
     group_id    UUID NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
     host_id     UUID NOT NULL REFERENCES hosts(id) ON DELETE CASCADE,
-    PRIMARY KEY (group_id, host_id)
+    CONSTRAINT uq_group_members UNIQUE (group_id, host_id)
 );
 
 CREATE INDEX idx_group_members_host ON group_members(host_id);
@@ -263,22 +263,21 @@ CREATE INDEX idx_imaging_logs_host ON imaging_logs(host_id);
 -- Snapins
 -- --------------------------------------------------------
 CREATE TABLE snapins (
-    id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    name        TEXT        NOT NULL UNIQUE,
-    description TEXT        NOT NULL DEFAULT '',
-    file_path   TEXT        NOT NULL DEFAULT '',
-    file_name   TEXT        NOT NULL DEFAULT '',
-    args        TEXT        NOT NULL DEFAULT '',
-    run_with    TEXT        NOT NULL DEFAULT '',
-    run_with_args TEXT      NOT NULL DEFAULT '',
-    hash        TEXT        NOT NULL DEFAULT '',
-    size_bytes  BIGINT      NOT NULL DEFAULT 0,
-    is_enabled  BOOLEAN     NOT NULL DEFAULT TRUE,
-    reboot_after BOOLEAN    NOT NULL DEFAULT FALSE,
-    hide_from_menu BOOLEAN  NOT NULL DEFAULT FALSE,
-    timeout_sec INT         NOT NULL DEFAULT 0,
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    name         TEXT        NOT NULL UNIQUE,
+    description  TEXT        NOT NULL DEFAULT '',
+    file_name    TEXT        NOT NULL DEFAULT '',
+    file_path    TEXT        NOT NULL DEFAULT '',
+    command      TEXT        NOT NULL DEFAULT '',
+    arguments    TEXT        NOT NULL DEFAULT '',
+    run_with     TEXT        NOT NULL DEFAULT '',
+    hash         TEXT        NOT NULL DEFAULT '',
+    size_bytes   BIGINT      NOT NULL DEFAULT 0,
+    is_enabled   BOOLEAN     NOT NULL DEFAULT TRUE,
+    to_replicate BOOLEAN     NOT NULL DEFAULT FALSE,
+    created_by   TEXT        NOT NULL DEFAULT '',
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- --------------------------------------------------------
@@ -328,18 +327,17 @@ CREATE TABLE snapin_tasks (
 -- Users
 -- --------------------------------------------------------
 CREATE TABLE users (
-    id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    username     CITEXT      NOT NULL UNIQUE,
-    password     TEXT        NOT NULL,            -- bcrypt hash
-    email        TEXT        NOT NULL DEFAULT '',
-    first_name   TEXT        NOT NULL DEFAULT '',
-    last_name    TEXT        NOT NULL DEFAULT '',
-    role         user_role   NOT NULL DEFAULT 'admin',
-    api_token    TEXT        NOT NULL DEFAULT '',
-    is_enabled   BOOLEAN     NOT NULL DEFAULT TRUE,
-    last_login   TIMESTAMPTZ,
-    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    username      CITEXT      NOT NULL UNIQUE,
+    password_hash TEXT        NOT NULL DEFAULT '',
+    email         TEXT        NOT NULL DEFAULT '',
+    role          user_role   NOT NULL DEFAULT 'admin',
+    is_active     BOOLEAN     NOT NULL DEFAULT TRUE,
+    api_token     TEXT        NOT NULL DEFAULT '',
+    created_by    TEXT        NOT NULL DEFAULT '',
+    last_login_at TIMESTAMPTZ,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE UNIQUE INDEX idx_users_api_token ON users(api_token) WHERE api_token <> '';
@@ -352,7 +350,7 @@ CREATE TABLE refresh_tokens (
     user_id    UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     token_hash TEXT        NOT NULL UNIQUE,
     expires_at TIMESTAMPTZ NOT NULL,
-    revoked    BOOLEAN     NOT NULL DEFAULT FALSE,
+    revoked_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -366,10 +364,10 @@ CREATE TABLE audit_logs (
     user_id     UUID        REFERENCES users(id) ON DELETE SET NULL,
     username    TEXT        NOT NULL DEFAULT '',
     action      TEXT        NOT NULL,
-    entity_type TEXT        NOT NULL DEFAULT '',
-    entity_id   TEXT        NOT NULL DEFAULT '',
-    detail      TEXT        NOT NULL DEFAULT '',
-    ip          TEXT        NOT NULL DEFAULT '',
+    resource    TEXT        NOT NULL DEFAULT '',
+    resource_id TEXT        NOT NULL DEFAULT '',
+    details     TEXT        NOT NULL DEFAULT '',
+    ip_address  TEXT        NOT NULL DEFAULT '',
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -536,13 +534,14 @@ VALUES (
     'fog'
 );
 
-INSERT INTO users (id, username, password, role, email, first_name, last_name)
-VALUES (
-    '00000000-0000-0000-0000-000000000010',
-    'fog',
-    '$2a$12$YhfhpV1DTLN1wJp/5Eol9OlrHZ4gBmZ0qRgFJp3b2y5D6T8L7QBOG',
-    'admin',
-    'fog@localhost',
-    'FOG',
-    'Admin'
-);
+-- Don't do that!
+-- INSERT INTO users (id, username, password, role, email, first_name, last_name)
+-- VALUES (
+--     '00000000-0000-0000-0000-000000000010',
+--     'fog',
+--     '$2a$12$YhfhpV1DTLN1wJp/5Eol9OlrHZ4gBmZ0qRgFJp3b2y5D6T8L7QBOG',
+--     'admin',
+--     'fog@localhost',
+--     'FOG',
+--     'Admin'
+-- );

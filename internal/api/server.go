@@ -109,7 +109,7 @@ func (s *Server) buildRouter() *chi.Mux {
 	}))
 
 	// ── REST API v1 ─────────────────────────────────────────────────
-	r.Route("/api/v1", func(r chi.Router) {
+	r.Route("/fog/api/v1", func(r chi.Router) {
                 // Public (no auth required) — rate-limited to 10 req/s burst 20 per IP
                 authH := handlers.NewAuth(s.cfg, s.store)
                 authRL := middleware.NewRateLimiter(10, 20)
