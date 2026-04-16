@@ -133,7 +133,7 @@ func (s *hostStore) DeleteHostMAC(ctx context.Context, id uuid.UUID) error {
 func (s *hostStore) ListHostMACs(ctx context.Context, hostID uuid.UUID) ([]*models.HostMAC, error) {
 	var macs []*models.HostMAC
 	err := s.db.SelectContext(ctx, &macs,
-		`SELECT * FROM host_macs WHERE host_id = $1 ORDER BY is_primary DESC, seen_at ASC`, hostID)
+		`SELECT * FROM host_macs WHERE host_id = $1 ORDER BY is_primary DESC, created_at ASC`, hostID)
 	return macs, err
 }
 

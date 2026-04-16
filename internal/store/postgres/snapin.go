@@ -69,7 +69,7 @@ func (s *snapinStore) AssociateSnapin(ctx context.Context, sa *models.SnapinAsso
 		sa.ID = uuid.New()
 	}
 	_, err := s.db.NamedExecContext(ctx, `
-		INSERT INTO snapin_assoc (id, snapin_id, host_id)
+		INSERT INTO snapin_assocs (id, snapin_id, host_id)
 		VALUES (:id, :snapin_id, :host_id)
 		ON CONFLICT (snapin_id, host_id) DO NOTHING`, sa)
 	return err
@@ -77,7 +77,7 @@ func (s *snapinStore) AssociateSnapin(ctx context.Context, sa *models.SnapinAsso
 
 func (s *snapinStore) DisassociateSnapin(ctx context.Context, snapinID, hostID uuid.UUID) error {
 	_, err := s.db.ExecContext(ctx,
-		`DELETE FROM snapin_assoc WHERE snapin_id = $1 AND host_id = $2`, snapinID, hostID)
+		`DELETE FROM snapin_assocs WHERE snapin_id = $1 AND host_id = $2`, snapinID, hostID)
 	return err
 }
 
@@ -85,7 +85,7 @@ func (s *snapinStore) ListHostSnapins(ctx context.Context, hostID uuid.UUID) ([]
 	var snapins []*models.Snapin
 	err := s.db.SelectContext(ctx, &snapins, `
 		SELECT sn.* FROM snapins sn
-		JOIN snapin_assoc sa ON sa.snapin_id = sn.id
+		JOIN snapin_assocs sa ON sa.snapin_id = sn.id
 		WHERE sa.host_id = $1 ORDER BY sn.name`, hostID)
 	return snapins, err
 }
