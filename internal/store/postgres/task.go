@@ -30,9 +30,9 @@ func (s *taskStore) ListTasks(ctx context.Context, filter store.TaskFilter, page
 	err := s.db.SelectContext(ctx, &tasks, `
 		SELECT * FROM tasks
 		WHERE ($1::uuid IS NULL OR id > $1)
-		  AND ($2 = '' OR state = $2)
+		  AND ($2 = '' OR state::text = $2)
 		  AND ($3::uuid IS NULL OR host_id = $3)
-		  AND ($4 = '' OR type = $4)
+		  AND ($4 = '' OR type::text = $4)
 		ORDER BY created_at DESC LIMIT $5`,
 		nullableUUID(page.Cursor), filter.State, filter.HostID, filter.Type, limit)
 	return tasks, err
