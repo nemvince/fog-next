@@ -25,7 +25,7 @@ type Server struct {
 func New(cfg *config.Config) *Server {
 	s := &Server{cfg: cfg}
 	s.tftp = tftp.NewServer(s.readHandler, nil)
-	s.tftp.SetTimeout(5) // seconds
+	s.tftp.EnableSinglePort()
 	return s
 }
 
@@ -55,15 +55,21 @@ func (s *Server) readHandler(filename string, rf io.ReaderFrom) error {
 	}
 	defer file.Close()
 
+
 	stat, err := file.Stat()
 	if err == nil {
+		slog.Debug("tftp: file opened", "file", filename, "size", stat.Size(), "error", err)
 		rf.(tftp.OutgoingTransfer).SetSize(stat.Size())
+	} else {
+		// Stat errors are non-fatal for TFTP; the transfer can proceed without a size.
+		slog.Warn("tftp: file stat error", "file", filename, "error", err)
 	}
 
 	n, err := rf.ReadFrom(file)
 	if err != nil {
 		slog.Error("tftp: read error", "file", filename, "error", err)
 		return err
+		
 	}
 	slog.Debug("tftp: served", "file", filename, "bytes", n)
 	return nil
