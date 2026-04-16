@@ -3,7 +3,7 @@ package ws
 import (
 	"net/http"
 
-	"nhooyr.io/websocket"
+	"github.com/coder/websocket"
 )
 
 // Handler upgrades HTTP connections to WebSocket and registers them with the Hub.

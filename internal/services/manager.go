@@ -22,19 +22,12 @@ type Service interface {
 type Manager struct {
 	services []Service
 	wg       sync.WaitGroup
-	errors   chan serviceError
-}
-
-type serviceError struct {
-	name string
-	err  error
 }
 
 // New creates a Manager with the provided services.
 func New(svcs ...Service) *Manager {
 	return &Manager{
 		services: svcs,
-		errors:   make(chan serviceError, len(svcs)),
 	}
 }
 

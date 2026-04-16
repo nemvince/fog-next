@@ -152,10 +152,7 @@ func (h *Auth) Refresh(w http.ResponseWriter, r *http.Request) {
 
 func (h *Auth) Logout(w http.ResponseWriter, r *http.Request) {
 	var req refreshRequest
-	if err := new(struct{ RefreshToken string `json:"refreshToken"` }); err != nil {
-		// Best-effort: decode body for refresh token to revoke.
-	}
-	_ = response.Decode(w, r, &req) // ignore error — logout always succeeds
+	_ = response.Decode(w, r, &req) // Best-effort: decode body for refresh token to revoke; ignore error — logout always succeeds
 
 	if req.RefreshToken != "" {
 		hashBytes := sha256.Sum256([]byte(req.RefreshToken))
