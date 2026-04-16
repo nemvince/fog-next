@@ -304,7 +304,7 @@ CREATE TABLE snapin_jobs (
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_snapin_jobs_task ON snapin_jobs(task_id);
+CREATE INDEX idx_snapin_jobs_host ON snapin_jobs(host_id);
 
 -- --------------------------------------------------------
 -- Snapin tasks (individual snapin within a snapin job)
