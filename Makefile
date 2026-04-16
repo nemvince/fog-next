@@ -7,8 +7,9 @@ BUILD_DIR  := build
 
 .PHONY: build run test lint clean \
         migrate-up migrate-down migrate-status \
-        docker-up docker-down \
-        web-build web-dev
+        docker-up docker-down docker-build \
+        web-build web-dev \
+        fetch-ipxe
 
 # ─── Go ───────────────────────────────────────────────────────────────────────
 
@@ -48,6 +49,23 @@ docker-up:
 
 docker-down:
 	docker compose -f deploy/docker/docker-compose.yml down
+
+docker-build:
+	docker build -f deploy/docker/Dockerfile -t fog-next:latest .
+
+# ─── iPXE boot files ──────────────────────────────────────────────────────────
+
+IPXE_DIR  ?= /tftpboot
+IPXE_BASE := https://boot.ipxe.org
+
+# Downloads the three standard iPXE boot binaries into IPXE_DIR.
+# Override with: make fetch-ipxe IPXE_DIR=/srv/tftp
+fetch-ipxe:
+	@mkdir -p $(IPXE_DIR)/arm64-efi
+	curl -fsSL -o $(IPXE_DIR)/undionly.kpxe         $(IPXE_BASE)/undionly.kpxe
+	curl -fsSL -o $(IPXE_DIR)/ipxe.efi              $(IPXE_BASE)/x86_64-efi/ipxe.efi
+	curl -fsSL -o $(IPXE_DIR)/arm64-efi/snponly.efi $(IPXE_BASE)/arm64-efi/snponly.efi
+	@echo "iPXE files written to $(IPXE_DIR)"
 
 # ─── React frontend ───────────────────────────────────────────────────────────
 

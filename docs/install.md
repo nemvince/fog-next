@@ -131,14 +131,25 @@ The wizard will:
 
 ### 5. Kernel and iPXE files
 
-FOG Next reads boot files (kernels, initrds, iPXE binaries) from `storage.kernel_path` (default `/opt/fog/kernels`) and `tftp.root_dir` (default `/tftpboot`).
+FOG Next reads boot files from `tftp.root_dir` (default `/tftpboot`) and kernels/initrds from `storage.kernel_path` (default `/opt/fog/kernels`).
 
-Copy the pre-built iPXE binaries from the repository:
+Download the standard iPXE binaries using the provided Makefile target:
+
 ```bash
-sudo cp -r packages/tftp/* /tftpboot/
+sudo make fetch-ipxe          # writes to /tftpboot by default
+# or to a custom directory:
+sudo make fetch-ipxe IPXE_DIR=/srv/tftp
 ```
 
-Download the FOG kernel and init from the FOG Project releases page and place them in `/opt/fog/kernels/`.
+This downloads:
+
+| File | Purpose |
+|------|---------|
+| `undionly.kpxe` | Legacy BIOS / UNDI PXE boot |
+| `ipxe.efi` | UEFI x86-64 |
+| `arm64-efi/snponly.efi` | UEFI ARM64 |
+
+Download the FOG kernel and init from the [FOG Project releases page](https://github.com/FOGProject/fos/releases) and place them in `/opt/fog/kernels/`.
 
 ---
 
@@ -180,6 +191,25 @@ dhcp-boot=tag:!efi-x86_64,undionly.kpxe,,192.168.1.10
 ## TFTP setup
 
 FOG Next includes its own TFTP server (enabled by default on `:69`). If you already run `tftpd-hpa` or `dnsmasq` as a TFTP server, either disable FOG's built-in TFTP (`tftp.enabled: false` in config) and point your TFTP root at `/tftpboot`, or let FOG's server handle it.
+
+### Populating /tftpboot
+
+For **Docker Compose** deployments the iPXE binaries are baked into the image automatically at build time — nothing extra is required.
+
+For **bare-metal** deployments run:
+
+```bash
+sudo make fetch-ipxe
+```
+
+Or manually:
+
+```bash
+sudo mkdir -p /tftpboot/arm64-efi
+sudo curl -fsSL -o /tftpboot/undionly.kpxe         https://boot.ipxe.org/undionly.kpxe
+sudo curl -fsSL -o /tftpboot/ipxe.efi              https://boot.ipxe.org/ipxe.efi
+sudo curl -fsSL -o /tftpboot/arm64-efi/snponly.efi https://boot.ipxe.org/arm64-efi/snponly.efi
+```
 
 Verify TFTP is reachable from a client:
 ```bash

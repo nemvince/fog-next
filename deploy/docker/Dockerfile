@@ -20,8 +20,8 @@ RUN CGO_ENABLED=0 go build -ldflags "-s -w" -o /fog ./cmd/fog
 FROM alpine:3.20 AS ipxe-fetcher
 RUN apk add --no-cache curl
 RUN mkdir -p /tftpboot && \
-    curl -fsSL -o /tftpboot/undionly.kpxe    https://boot.ipxe.org/undionly.kpxe    && \
-    curl -fsSL -o /tftpboot/ipxe.efi         https://boot.ipxe.org/ipxe.efi         && \
+    curl -fsSL -o /tftpboot/undionly.kpxe    https://boot.ipxe.org/undionly.kpxe       && \
+    curl -fsSL -o /tftpboot/ipxe.efi         https://boot.ipxe.org/x86_64-efi/ipxe.efi && \
     curl -fsSL -o /tftpboot/arm64-efi/snponly.efi \
          --create-dirs https://boot.ipxe.org/arm64-efi/snponly.efi
 
