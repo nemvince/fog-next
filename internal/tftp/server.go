@@ -5,6 +5,8 @@
 package tftp
 
 import (
+	"bytes"
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -43,7 +45,25 @@ func (s *Server) ListenAndServe() error {
 
 // readHandler is called by the pin/tftp library for every incoming TFTP GET
 // request.  It returns a file reader for the requested path within RootDir.
+// The special file "autoexec.ipxe" is generated dynamically from the server
+// config so iPXE firmware auto-chains to the FOG boot menu without needing a
+// static file on disk.
 func (s *Server) readHandler(filename string, rf io.ReaderFrom) error {
+	// autoexec.ipxe: iPXE executes this automatically after loading.
+	// Generate it from config so it always points at the correct base_url.
+	if filepath.Clean("/"+filename) == "/autoexec.ipxe" {
+		script := fmt.Sprintf("#!ipxe\nchain %s/fog/boot?mac=${net0/mac}\n", s.cfg.Server.BaseURL)
+		buf := bytes.NewBufferString(script)
+		rf.(tftp.OutgoingTransfer).SetSize(int64(buf.Len()))
+		n, err := rf.ReadFrom(buf)
+		if err != nil {
+			slog.Error("tftp: autoexec send error", "error", err)
+			return err
+		}
+		slog.Debug("tftp: served autoexec.ipxe", "bytes", n)
+		return nil
+	}
+
 	// Sanitise the path — prevent directory traversal attacks.
 	clean := filepath.Clean("/" + filename)
 	full := filepath.Join(s.cfg.TFTP.RootDir, clean)
