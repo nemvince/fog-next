@@ -298,7 +298,6 @@ CREATE INDEX idx_snapin_assocs_snapin ON snapin_assocs(snapin_id);
 -- --------------------------------------------------------
 CREATE TABLE snapin_jobs (
     id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    task_id     UUID        NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
     host_id     UUID        NOT NULL REFERENCES hosts(id) ON DELETE CASCADE,
     state       TEXT        NOT NULL DEFAULT 'queued',
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -315,12 +314,9 @@ CREATE TABLE snapin_tasks (
     snapin_job_id UUID        NOT NULL REFERENCES snapin_jobs(id) ON DELETE CASCADE,
     snapin_id     UUID        NOT NULL REFERENCES snapins(id) ON DELETE CASCADE,
     state         TEXT        NOT NULL DEFAULT 'queued',
-    return_code   INT,
-    log           TEXT        NOT NULL DEFAULT '',
+    exit_code     INT,
     started_at    TIMESTAMPTZ,
-    completed_at  TIMESTAMPTZ,
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    completed_at  TIMESTAMPTZ
 );
 
 -- --------------------------------------------------------
@@ -382,13 +378,18 @@ CREATE TABLE inventory (
     host_id       UUID        NOT NULL UNIQUE REFERENCES hosts(id) ON DELETE CASCADE,
     cpu_model     TEXT        NOT NULL DEFAULT '',
     cpu_cores     INT         NOT NULL DEFAULT 0,
-    ram_mb        INT         NOT NULL DEFAULT 0,
-    disk_model    TEXT        NOT NULL DEFAULT '',
-    disk_size_gb  INT         NOT NULL DEFAULT 0,
-    gpu_model     TEXT        NOT NULL DEFAULT '',
+    cpu_freq_mhz  INT         NOT NULL DEFAULT 0,
+    ram_mib       INT         NOT NULL DEFAULT 0,
+    hd_model      TEXT        NOT NULL DEFAULT '',
+    hd_size_gb    INT         NOT NULL DEFAULT 0,
+    manufacturer  TEXT        NOT NULL DEFAULT '',
+    product       TEXT        NOT NULL DEFAULT '',
+    serial        TEXT        NOT NULL DEFAULT '',
+    uuid          TEXT        NOT NULL DEFAULT '',
     bios_version  TEXT        NOT NULL DEFAULT '',
-    serial_number TEXT        NOT NULL DEFAULT '',
-    asset_tag     TEXT        NOT NULL DEFAULT '',
+    primary_mac   TEXT        NOT NULL DEFAULT '',
+    os_name       TEXT        NOT NULL DEFAULT '',
+    os_version    TEXT        NOT NULL DEFAULT '',
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -400,12 +401,12 @@ CREATE TABLE printers (
     id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     name        TEXT        NOT NULL UNIQUE,
     description TEXT        NOT NULL DEFAULT '',
-    type        TEXT        NOT NULL DEFAULT 'network',  -- network | local | cups
+    type        TEXT        NOT NULL DEFAULT 'network',
     port        TEXT        NOT NULL DEFAULT '',
     ip          TEXT        NOT NULL DEFAULT '',
     model       TEXT        NOT NULL DEFAULT '',
+    driver      TEXT        NOT NULL DEFAULT '',
     is_default  BOOLEAN     NOT NULL DEFAULT FALSE,
-    alias       TEXT        NOT NULL DEFAULT '',
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -417,6 +418,7 @@ CREATE TABLE printer_assocs (
     id          UUID    PRIMARY KEY DEFAULT gen_random_uuid(),
     host_id     UUID    NOT NULL REFERENCES hosts(id) ON DELETE CASCADE,
     printer_id  UUID    NOT NULL REFERENCES printers(id) ON DELETE CASCADE,
+    is_default  BOOLEAN NOT NULL DEFAULT FALSE,
     CONSTRAINT uq_printer_assocs UNIQUE (host_id, printer_id)
 );
 
@@ -424,24 +426,26 @@ CREATE TABLE printer_assocs (
 -- Global settings
 -- --------------------------------------------------------
 CREATE TABLE global_settings (
-    key         TEXT PRIMARY KEY,
-    value       TEXT NOT NULL DEFAULT '',
-    description TEXT NOT NULL DEFAULT '',
+    id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    key         TEXT        NOT NULL UNIQUE,
+    value       TEXT        NOT NULL DEFAULT '',
+    description TEXT        NOT NULL DEFAULT '',
+    category    TEXT        NOT NULL DEFAULT '',
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-INSERT INTO global_settings (key, value, description) VALUES
-    ('fog_server_address',  '',      'Hostname or IP of the FOG server'),
-    ('fog_tftp_address',    '',      'TFTP server address for PXE boot menu'),
-    ('fog_storage_root',    '/opt/fog/images', 'Default image storage root'),
-    ('fog_nfs_export',      '',      'NFS export path for legacy client support'),
-    ('fog_https_enabled',   'false', 'Serve HTTPS on port 443'),
-    ('fog_shutdown_enabled','false', 'Allow tasks to shut down clients'),
-    ('fog_domain_name',     '',      'Active Directory domain name'),
-    ('fog_domain_user',     '',      'AD join account username'),
-    ('fog_domain_password', '',      'AD join account password (encrypted)'),
-    ('fog_max_receivers',   '10',    'Max simultaneous multicast receivers'),
-    ('fog_log_level',       'info',  'Log level: debug, info, warn, error');
+INSERT INTO global_settings (key, value, description, category) VALUES
+    ('fog_server_address',  '',      'Hostname or IP of the FOG server',       'server'),
+    ('fog_tftp_address',    '',      'TFTP server address for PXE boot menu',  'server'),
+    ('fog_storage_root',    '/opt/fog/images', 'Default image storage root',   'storage'),
+    ('fog_nfs_export',      '',      'NFS export path for legacy client support', 'storage'),
+    ('fog_https_enabled',   'false', 'Serve HTTPS on port 443',                'server'),
+    ('fog_shutdown_enabled','false', 'Allow tasks to shut down clients',        'tasks'),
+    ('fog_domain_name',     '',      'Active Directory domain name',            'domain'),
+    ('fog_domain_user',     '',      'AD join account username',                'domain'),
+    ('fog_domain_password', '',      'AD join account password (encrypted)',    'domain'),
+    ('fog_max_receivers',   '10',    'Max simultaneous multicast receivers',    'multicast'),
+    ('fog_log_level',       'info',  'Log level: debug, info, warn, error',     'server');
 
 -- --------------------------------------------------------
 -- Modules (feature toggles)
@@ -449,30 +453,32 @@ INSERT INTO global_settings (key, value, description) VALUES
 CREATE TABLE modules (
     id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     name        TEXT        NOT NULL UNIQUE,
-    description TEXT        NOT NULL DEFAULT '',
+    short_name  TEXT        NOT NULL DEFAULT '',
+    is_default  BOOLEAN     NOT NULL DEFAULT FALSE,
     is_enabled  BOOLEAN     NOT NULL DEFAULT TRUE,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-INSERT INTO modules (name, description, is_enabled) VALUES
-    ('AutoLogOut',      'Auto log out idle sessions',               TRUE),
-    ('DisplayManager',  'Manage display settings',                  TRUE),
-    ('GreenFog',        'Power management (green settings)',        FALSE),
-    ('HostnameChanger', 'Rename hosts after deployment',            TRUE),
-    ('PrinterManager',  'Deploy and manage printers',               TRUE),
-    ('SnapinClient',    'Deploy snapins to clients',                TRUE),
-    ('TaskReboot',      'Reboot after task completion',             TRUE),
-    ('UserCleanup',     'Remove stale local user profiles',         FALSE),
-    ('UserTracker',     'Track logged-in users',                    TRUE);
+INSERT INTO modules (name, short_name, is_default, is_enabled) VALUES
+    ('AutoLogOut',      'autologout',   FALSE, TRUE),
+    ('DisplayManager',  'display',      FALSE, TRUE),
+    ('GreenFog',        'greenfog',     FALSE, FALSE),
+    ('HostnameChanger', 'hostname',     TRUE,  TRUE),
+    ('PrinterManager',  'printer',      FALSE, TRUE),
+    ('SnapinClient',    'snapin',       FALSE, TRUE),
+    ('TaskReboot',      'taskreboot',   FALSE, TRUE),
+    ('UserCleanup',     'usercleanup',  FALSE, FALSE),
+    ('UserTracker',     'usertracker',  FALSE, TRUE);
 
 -- --------------------------------------------------------
 -- Module status per host
 -- --------------------------------------------------------
 CREATE TABLE module_statuses (
-    host_id     UUID    NOT NULL REFERENCES hosts(id) ON DELETE CASCADE,
-    module_id   UUID    NOT NULL REFERENCES modules(id) ON DELETE CASCADE,
-    is_enabled  BOOLEAN NOT NULL DEFAULT TRUE,
-    PRIMARY KEY (host_id, module_id)
+    id        UUID    NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    host_id   UUID    NOT NULL REFERENCES hosts(id) ON DELETE CASCADE,
+    module_id UUID    NOT NULL REFERENCES modules(id) ON DELETE CASCADE,
+    is_on     BOOLEAN NOT NULL DEFAULT TRUE,
+    CONSTRAINT uq_module_statuses UNIQUE (host_id, module_id)
 );
 
 -- --------------------------------------------------------
@@ -482,7 +488,7 @@ CREATE TABLE multicast_sessions (
     id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     name             TEXT        NOT NULL DEFAULT '',
     image_id         UUID        NOT NULL REFERENCES images(id) ON DELETE CASCADE,
-    storage_node_id  UUID        REFERENCES storage_nodes(id) ON DELETE SET NULL,
+    storage_node_id  UUID        NOT NULL REFERENCES storage_nodes(id) ON DELETE CASCADE,
     port             INT         NOT NULL DEFAULT 9000,
     interface        TEXT        NOT NULL DEFAULT '',
     client_count     INT         NOT NULL DEFAULT 0,
@@ -498,20 +504,20 @@ CREATE TABLE multicast_sessions (
 CREATE TABLE multicast_session_members (
     id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     session_id      UUID        NOT NULL REFERENCES multicast_sessions(id) ON DELETE CASCADE,
-    host_id         UUID        NOT NULL REFERENCES hosts(id) ON DELETE CASCADE,
-    joined_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    completed_at    TIMESTAMPTZ,
-    CONSTRAINT uq_mc_session_members UNIQUE (session_id, host_id)
+    task_id         UUID        NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    host_id         UUID        NOT NULL REFERENCES hosts(id) ON DELETE CASCADE
 );
 
 -- --------------------------------------------------------
 -- Storage node failures (audit trail)
 -- --------------------------------------------------------
 CREATE TABLE storage_node_failures (
-    id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    storage_node_id UUID        NOT NULL REFERENCES storage_nodes(id) ON DELETE CASCADE,
-    error_message   TEXT        NOT NULL DEFAULT '',
-    occurred_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    id       UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    node_id  UUID        NOT NULL REFERENCES storage_nodes(id) ON DELETE CASCADE,
+    task_id  UUID        NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    host_id  UUID        NOT NULL REFERENCES hosts(id) ON DELETE CASCADE,
+    group_id UUID        REFERENCES storage_groups(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- --------------------------------------------------------
@@ -519,8 +525,8 @@ CREATE TABLE storage_node_failures (
 -- bcrypt cost 12 hash of "password":
 -- $2a$12$YhfhpV1DTLN1wJp/5Eol9OlrHZ4gBmZ0qRgFJp3b2y5D6T8L7QBOG
 -- --------------------------------------------------------
-INSERT INTO storage_groups (id, name, max_clients)
-VALUES ('00000000-0000-0000-0000-000000000001', 'default', 10);
+INSERT INTO storage_groups (id, name)
+VALUES ('00000000-0000-0000-0000-000000000001', 'default');
 
 INSERT INTO storage_nodes (id, name, hostname, root_path, web_root, storage_group_id, is_master, ssh_user)
 VALUES (
