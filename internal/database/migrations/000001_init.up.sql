@@ -14,11 +14,12 @@ CREATE EXTENSION IF NOT EXISTS "citext";     -- case-insensitive text
 CREATE TYPE user_role AS ENUM ('admin', 'readonly');
 CREATE TYPE task_type AS ENUM (
     'deploy', 'capture', 'multicast',
-    'debug', 'memtest', 'wipe', 'virus_scan', 'snapin'
+    'debug_deploy', 'debug_capture',
+    'memtest', 'wipe', 'disk_test', 'av_scan', 'snapin_install'
 );
 CREATE TYPE task_state AS ENUM (
     'queued', 'active', 'complete',
-    'cancelled', 'failed', 'noqueue'
+    'canceled', 'failed'
 );
 
 -- --------------------------------------------------------
@@ -195,27 +196,26 @@ CREATE INDEX idx_group_members_host ON group_members(host_id);
 -- Tasks
 -- --------------------------------------------------------
 CREATE TABLE tasks (
-    id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    name             TEXT        NOT NULL DEFAULT '',
-    type             task_type   NOT NULL,
-    state            task_state  NOT NULL DEFAULT 'queued',
-    host_id          UUID        REFERENCES hosts(id) ON DELETE SET NULL,
-    is_group         BOOLEAN     NOT NULL DEFAULT FALSE,
-    image_id         UUID        REFERENCES images(id) ON DELETE SET NULL,
-    storage_group_id UUID        REFERENCES storage_groups(id) ON DELETE SET NULL,
-    storage_node_id  UUID        REFERENCES storage_nodes(id) ON DELETE SET NULL,
-    percent          INT         NOT NULL DEFAULT 0,
-    elapsed_seconds  INT         NOT NULL DEFAULT 0,
-    eta_seconds      INT         NOT NULL DEFAULT 0,
-    is_force         BOOLEAN     NOT NULL DEFAULT FALSE,
-    is_shutdown      BOOLEAN     NOT NULL DEFAULT FALSE,
-    is_wipe          BOOLEAN     NOT NULL DEFAULT FALSE,
-    created_by       TEXT        NOT NULL DEFAULT '',
-    log              TEXT        NOT NULL DEFAULT '',
-    started_at       TIMESTAMPTZ,
-    completed_at     TIMESTAMPTZ,
-    created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    id                UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    name              TEXT        NOT NULL DEFAULT '',
+    type              task_type   NOT NULL,
+    state             task_state  NOT NULL DEFAULT 'queued',
+    host_id           UUID        REFERENCES hosts(id) ON DELETE SET NULL,
+    is_group          BOOLEAN     NOT NULL DEFAULT FALSE,
+    image_id          UUID        REFERENCES images(id) ON DELETE SET NULL,
+    storage_group_id  UUID        REFERENCES storage_groups(id) ON DELETE SET NULL,
+    storage_node_id   UUID        REFERENCES storage_nodes(id) ON DELETE SET NULL,
+    percent_complete  INT         NOT NULL DEFAULT 0,
+    bits_per_minute   BIGINT      NOT NULL DEFAULT 0,
+    bytes_transferred BIGINT      NOT NULL DEFAULT 0,
+    is_forced         BOOLEAN     NOT NULL DEFAULT FALSE,
+    is_shutdown       BOOLEAN     NOT NULL DEFAULT FALSE,
+    created_by        TEXT        NOT NULL DEFAULT '',
+    scheduled_at      TIMESTAMPTZ,
+    started_at        TIMESTAMPTZ,
+    completed_at      TIMESTAMPTZ,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_tasks_host ON tasks(host_id);
@@ -228,33 +228,33 @@ CREATE INDEX idx_tasks_created ON tasks(created_at);
 CREATE TABLE scheduled_tasks (
     id           UUID      PRIMARY KEY DEFAULT gen_random_uuid(),
     name         TEXT      NOT NULL,
+    description  TEXT      NOT NULL DEFAULT '',
     task_type    task_type NOT NULL,
     target_id    UUID      NOT NULL,   -- host or group UUID
     is_group     BOOLEAN   NOT NULL DEFAULT FALSE,
-    is_enabled   BOOLEAN   NOT NULL DEFAULT TRUE,
+    is_active    BOOLEAN   NOT NULL DEFAULT TRUE,
     is_shutdown  BOOLEAN   NOT NULL DEFAULT FALSE,
     minute       TEXT      NOT NULL DEFAULT '0',
     hour         TEXT      NOT NULL DEFAULT '*',
     day_of_month TEXT      NOT NULL DEFAULT '*',
     month        TEXT      NOT NULL DEFAULT '*',
     day_of_week  TEXT      NOT NULL DEFAULT '*',
-    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    next_run_at  TIMESTAMPTZ,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- --------------------------------------------------------
 -- Imaging logs
 -- --------------------------------------------------------
 CREATE TABLE imaging_logs (
-    id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    host_id      UUID        REFERENCES hosts(id) ON DELETE SET NULL,
-    host_name    TEXT        NOT NULL DEFAULT '',
-    image_name   TEXT        NOT NULL DEFAULT '',
-    task_type    task_type   NOT NULL,
-    success      BOOLEAN     NOT NULL DEFAULT FALSE,
-    elapsed_sec  INT         NOT NULL DEFAULT 0,
-    started_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    completed_at TIMESTAMPTZ
+    id         UUID      PRIMARY KEY DEFAULT gen_random_uuid(),
+    host_id    UUID      REFERENCES hosts(id) ON DELETE SET NULL,
+    task_id    UUID      REFERENCES tasks(id) ON DELETE SET NULL,
+    task_type  task_type NOT NULL,
+    image_id   UUID      REFERENCES images(id) ON DELETE SET NULL,
+    size_bytes BIGINT    NOT NULL DEFAULT 0,
+    duration   INT       NOT NULL DEFAULT 0,  -- seconds
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_imaging_logs_host ON imaging_logs(host_id);
