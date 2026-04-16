@@ -19,10 +19,10 @@ RUN CGO_ENABLED=0 go build -ldflags "-s -w" -o /fog ./cmd/fog
 # snponly.efi    — UEFI ARM64 (via snponly which avoids driver conflicts)
 FROM alpine:3.20 AS ipxe-fetcher
 RUN apk add --no-cache curl
-RUN mkdir -p /tftpboot && \
-    curl -fsSL -o /tftpboot/undionly.kpxe https://boot.ipxe.org/undionly.kpxe       && \
-    curl -fsSL -o /tftpboot/ipxe.efi      https://boot.ipxe.org/x86_64-efi/ipxe.efi && \
-    curl -fsSL -o /tftpboot/snponly.efi   https://boot.ipxe.org/x86_64-efi/snponly.efi
+RUN mkdir -p /tftpboot
+RUN curl -fsSL -o /tftpboot/undionly.kpxe https://boot.ipxe.org/undionly.kpxe
+RUN curl -fsSL -o /tftpboot/ipxe.efi      https://boot.ipxe.org/x86_64-efi/ipxe.efi
+RUN curl -fsSL -o /tftpboot/snponly.efi   https://boot.ipxe.org/x86_64-efi/snponly.efi
 
 FROM alpine:3.20
 RUN apk add --no-cache ca-certificates tzdata
