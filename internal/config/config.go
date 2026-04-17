@@ -21,6 +21,7 @@ type Config struct {
 	Services ServicesConfig `mapstructure:"services"`
 	LDAP     LDAPConfig     `mapstructure:"ldap"`
 	Log      LogConfig      `mapstructure:"log"`
+	FOS      FOSConfig      `mapstructure:"fos"`
 }
 
 type ServerConfig struct {
@@ -106,6 +107,23 @@ type LogConfig struct {
 	Format string `mapstructure:"format"` // "json" or "text"
 }
 
+// FOSConfig controls automatic download of fos-next kernel and initramfs
+// artifacts during `fog install`.
+type FOSConfig struct {
+	// ReleaseURL is the base URL of the fos-next release to download from.
+	// The installer appends the individual file names (KernelFile, InitFile,
+	// sha256sums) to this URL.
+	// Default: https://github.com/nemvince/fos-next/releases/latest/download
+	ReleaseURL string `mapstructure:"release_url"`
+	// KernelFile is the filename of the kernel image in the release archive.
+	KernelFile string `mapstructure:"kernel_file"`
+	// InitFile is the filename of the compressed initramfs.
+	InitFile string `mapstructure:"init_file"`
+	// SkipDownload disables automatic downloading during `fog install`.
+	// Set to true if you manage the kernel files manually.
+	SkipDownload bool `mapstructure:"skip_download"`
+}
+
 // Load reads configuration from the given file path (or the default search
 // paths when filePath is empty). Settings not present in the file fall back
 // to built-in defaults.
@@ -174,6 +192,11 @@ func setDefaults(v *viper.Viper) {
 
 	v.SetDefault("log.level", "info")
 	v.SetDefault("log.format", "text")
+
+	v.SetDefault("fos.release_url", "https://github.com/nemvince/fos-next/releases/latest/download")
+	v.SetDefault("fos.kernel_file", "bzImage")
+	v.SetDefault("fos.init_file", "init.xz")
+	v.SetDefault("fos.skip_download", false)
 }
 
 // Defaults returns a Config populated entirely from defaults (no file needed).

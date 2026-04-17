@@ -137,6 +137,7 @@ fog migrate up         Apply all pending database migrations
 fog migrate down       Roll back the most recent migration
 fog migrate status     Print current migration schema version
 fog migrate-legacy     Import hosts/images/groups from a FOG 1.x MySQL database
+fog fetch-kernels      Download (or re-download) the fos-next kernel and initramfs
 fog version            Print the fog-next version
 ```
 

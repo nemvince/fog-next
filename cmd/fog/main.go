@@ -23,6 +23,7 @@ import (
 	"github.com/nemvince/fog-next/internal/auth"
 	"github.com/nemvince/fog-next/internal/config"
 	"github.com/nemvince/fog-next/internal/database"
+	"github.com/nemvince/fog-next/internal/fos"
 	"github.com/nemvince/fog-next/internal/legacymigrate"
 	"github.com/nemvince/fog-next/internal/models"
 	"github.com/nemvince/fog-next/internal/services"
@@ -47,7 +48,7 @@ func rootCmd() *cobra.Command {
 		Short: "FOG Next — network boot and imaging server",
 	}
 	root.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default: /etc/fog/config.yaml)")
-	root.AddCommand(serveCmd(), migrateCmd(), installCmd(), migrateLegacyCmd(), versionCmd())
+	root.AddCommand(serveCmd(), migrateCmd(), installCmd(), migrateLegacyCmd(), fetchKernelsCmd(), versionCmd())
 	return root
 }
 
@@ -257,7 +258,54 @@ func runInstall(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("create admin user: %w", err)
 	}
 	fmt.Printf("Admin user %q created.\n", adminUser)
+
+	// Download fos-next kernel and initramfs unless explicitly disabled.
+	if !cfg.FOS.SkipDownload {
+		fmt.Printf("\nDownloading fos-next artifacts from %s\n", cfg.FOS.ReleaseURL)
+		d := fos.New(cfg.FOS, cfg.Storage.KernelPath)
+		if err := d.Download(context.Background()); err != nil {
+			// Non-fatal: warn rather than fail the install.
+			fmt.Printf("Warning: fos-next download failed: %v\n", err)
+			fmt.Println("You can retry later with: fog fetch-kernels")
+		} else {
+			fmt.Printf("fos-next artifacts installed to %s\n", cfg.Storage.KernelPath)
+		}
+	} else {
+		fmt.Println("Skipping fos-next download (fos.skip_download = true).")
+	}
 	return nil
+}
+
+// ------------------------------------------------------- fetch-kernels ----
+
+func fetchKernelsCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "fetch-kernels",
+		Short: "Download or re-download the fos-next kernel and initramfs",
+		Long: `Downloads the fos-next kernel (bzImage) and initramfs (init.xz) from the
+configured release URL and installs them into the kernel_path directory.
+
+The release URL is read from fos.release_url in the config file.
+Set fos.skip_download: true to permanently disable automatic downloading.
+
+Example:
+  fog fetch-kernels
+  fog fetch-kernels -c /etc/fog/config.yaml`,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			cfg := mustConfig()
+			if cfg.FOS.SkipDownload {
+				fmt.Println("fos.skip_download is true — nothing to do.")
+				return nil
+			}
+			fmt.Printf("Downloading fos-next artifacts from %s\n", cfg.FOS.ReleaseURL)
+			d := fos.New(cfg.FOS, cfg.Storage.KernelPath)
+			if err := d.Download(context.Background()); err != nil {
+				return err
+			}
+			fmt.Printf("fos-next artifacts installed to %s\n", cfg.Storage.KernelPath)
+			return nil
+		},
+	}
 }
 
 // -------------------------------------------------------- migrate-legacy ---
