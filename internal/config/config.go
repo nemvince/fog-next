@@ -59,10 +59,13 @@ func (d DatabaseConfig) DSNString() string {
 }
 
 type AuthConfig struct {
-	// JWTSecret is used to sign access and refresh tokens.
+	// JWTSecret is used to sign access, refresh, and boot tokens.
 	JWTSecret          string        `mapstructure:"jwt_secret"`
 	AccessTokenExpiry  time.Duration `mapstructure:"access_token_expiry"`
 	RefreshTokenExpiry time.Duration `mapstructure:"refresh_token_expiry"`
+	// BootTokenExpiry controls how long a boot session token is valid.
+	// Default is 2 hours — long enough for slow-link imaging sessions.
+	BootTokenExpiry    time.Duration `mapstructure:"boot_token_expiry"`
 }
 
 type StorageConfig struct {

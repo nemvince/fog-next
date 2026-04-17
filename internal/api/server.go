@@ -115,6 +115,24 @@ func (s *Server) buildRouter() *chi.Mux {
                 authRL := middleware.NewRateLimiter(10, 20)
                 r.With(authRL.Handler).Post("/auth/login", authH.Login)
                 r.With(authRL.Handler).Post("/auth/refresh", authH.Refresh)
+
+		// ── Boot API (fos-agent endpoints) ─────────────────────
+		// Unauthenticated endpoints (handshake and register are public).
+		bootRL := middleware.NewRateLimiter(5, 10)
+		bootAPIH := handlers.NewBootAPI(s.cfg, s.store)
+		r.With(bootRL.Handler).Post("/boot/handshake", bootAPIH.Handshake)
+		r.With(bootRL.Handler).Post("/boot/register", bootAPIH.Register)
+		// Boot-token-authenticated endpoints.
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.AuthenticateBoot(s.cfg))
+			r.Post("/boot/progress", bootAPIH.Progress)
+			r.Post("/boot/complete", bootAPIH.Complete)
+			r.Route("/boot/images/{id}", func(r chi.Router) {
+				r.Get("/download", bootAPIH.Download)
+				r.Put("/upload", bootAPIH.Upload)
+			})
+		})
+
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.Authenticate(s.cfg))
 
