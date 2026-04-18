@@ -1,4 +1,3 @@
-// cn — merge Tailwind classes safely
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 

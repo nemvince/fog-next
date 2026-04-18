@@ -6,3 +6,7 @@ internal/api/static/*
 
 # IDE settings
 .vscode
+
+# vibeslop assist
+.agents
+skills-lock.json

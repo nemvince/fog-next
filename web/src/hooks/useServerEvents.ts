@@ -7,7 +7,6 @@ interface WSEvent {
 	at: string;
 }
 
-/** Connects to the server's WebSocket endpoint and invalidates query cache on events. */
 export function useServerEvents() {
 	const qc = useQueryClient();
 	const wsRef = useRef<WebSocket | null>(null);

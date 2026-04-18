@@ -1,12 +1,17 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { authApi } from "@/api/client";
+
+interface TokenPair {
+	accessToken: string;
+	refreshToken: string;
+	expiresAt: string;
+}
 
 interface AuthState {
 	accessToken: string | null;
 	refreshToken: string | null;
 	isAuthenticated: boolean;
-	login: (username: string, password: string) => Promise<void>;
+	login: (tokens: TokenPair) => void;
 	logout: () => void;
 }
 
@@ -17,17 +22,15 @@ export const useAuthStore = create<AuthState>()(
 			refreshToken: null,
 			isAuthenticated: false,
 
-			login: async (username, password) => {
-				const { accessToken, refreshToken } = await authApi.login(
-					username,
-					password,
-				);
-				localStorage.setItem("fog_token", accessToken);
-				set({ accessToken, refreshToken, isAuthenticated: true });
+			login: (tokens) => {
+				set({
+					accessToken: tokens.accessToken,
+					refreshToken: tokens.refreshToken,
+					isAuthenticated: true,
+				});
 			},
 
 			logout: () => {
-				localStorage.removeItem("fog_token");
 				set({ accessToken: null, refreshToken: null, isAuthenticated: false });
 			},
 		}),
