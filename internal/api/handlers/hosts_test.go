@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/nemvince/fog-next/internal/api/handlers"
 	"github.com/nemvince/fog-next/internal/models"
+	"github.com/nemvince/fog-next/internal/plugins"
 	"github.com/nemvince/fog-next/internal/store"
 )
 
@@ -123,7 +124,7 @@ func (m *mockStore) Settings() store.SettingsStore { return nil }
 
 func newRouter(st store.Store) http.Handler {
 	r := chi.NewRouter()
-	h := handlers.NewHosts(st, nil)
+	h := handlers.NewHosts(st, &plugins.Registry{})
 	r.Get("/hosts", h.List)
 	r.Post("/hosts", h.Create)
 	r.Get("/hosts/{id}", h.Get)
