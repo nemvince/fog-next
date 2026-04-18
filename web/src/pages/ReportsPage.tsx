@@ -1,4 +1,3 @@
-import { type ImagingLogEntry, reportsApi } from "@/api/client";
 import { useQuery } from "@tanstack/react-query";
 import {
 	createColumnHelper,
@@ -7,6 +6,7 @@ import {
 	useReactTable,
 } from "@tanstack/react-table";
 import { useState } from "react";
+import { type ImagingLogEntry, reportsApi } from "@/api/client";
 
 const col = createColumnHelper<ImagingLogEntry>();
 
@@ -68,7 +68,14 @@ export function ReportsPage() {
 	});
 
 	function exportCSV(rows: ImagingLogEntry[]) {
-		const headers = ["Host ID", "Type", "Image ID", "Size (bytes)", "Duration (s)", "Date"];
+		const headers = [
+			"Host ID",
+			"Type",
+			"Image ID",
+			"Size (bytes)",
+			"Duration (s)",
+			"Date",
+		];
 		const lines = rows.map((r) =>
 			[
 				r.hostId,

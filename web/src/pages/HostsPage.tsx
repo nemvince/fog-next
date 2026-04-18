@@ -1,13 +1,13 @@
-import { type Host, hostsApi } from "@/api/client";
-import { Badge } from "@/components/ui/Badge";
 import { useQuery } from "@tanstack/react-query";
 import {
-    createColumnHelper,
-    flexRender,
-    getCoreRowModel,
-    useReactTable,
+	createColumnHelper,
+	flexRender,
+	getCoreRowModel,
+	useReactTable,
 } from "@tanstack/react-table";
 import { useNavigate } from "react-router-dom";
+import { type Host, hostsApi } from "@/api/client";
+import { Badge } from "@/components/ui/Badge";
 
 const col = createColumnHelper<Host>();
 

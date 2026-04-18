@@ -1,22 +1,22 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+	createColumnHelper,
+	getCoreRowModel,
+	useReactTable,
+} from "@tanstack/react-table";
+import { Plus, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
 import { type Group, groupsApi } from "@/api/client";
 import { Button } from "@/components/ui/Button";
 import { DataTable } from "@/components/ui/DataTable";
 import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
+	Dialog,
+	DialogContent,
+	DialogHeader,
+	DialogTitle,
 } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
 import { toast } from "@/components/ui/Toast";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-    createColumnHelper,
-    getCoreRowModel,
-    useReactTable,
-} from "@tanstack/react-table";
-import { Plus, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
 
 const col = createColumnHelper<Group>();
 
@@ -50,26 +50,29 @@ export function GroupsPage() {
 		onError: (e: Error) => toast(e.message, { variant: "destructive" }),
 	});
 
-	const columns = useMemo(() => [
-		col.accessor("name", { header: "Name" }),
-		col.accessor("description", { header: "Description" }),
-		col.accessor("createdAt", {
-			header: "Created",
-			cell: (info) => new Date(info.getValue()).toLocaleDateString(),
-		}),
-		col.display({
-			id: "actions",
-			cell: (info) => (
-				<Button
-					variant="ghost"
-					size="icon"
-					onClick={() => deleteMutation.mutate(info.row.original.id)}
-				>
-					<Trash2 className="h-4 w-4 text-red-400" />
-				</Button>
-			),
-		}),
-	], [deleteMutation.mutate]);
+	const columns = useMemo(
+		() => [
+			col.accessor("name", { header: "Name" }),
+			col.accessor("description", { header: "Description" }),
+			col.accessor("createdAt", {
+				header: "Created",
+				cell: (info) => new Date(info.getValue()).toLocaleDateString(),
+			}),
+			col.display({
+				id: "actions",
+				cell: (info) => (
+					<Button
+						variant="ghost"
+						size="icon"
+						onClick={() => deleteMutation.mutate(info.row.original.id)}
+					>
+						<Trash2 className="h-4 w-4 text-red-400" />
+					</Button>
+				),
+			}),
+		],
+		[deleteMutation.mutate],
+	);
 
 	const table = useReactTable({
 		data: data?.data ?? [],

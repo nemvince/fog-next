@@ -1,4 +1,11 @@
-import { type Host, type Image, type Task, hostsApi, imagesApi, tasksApi } from "@/api/client";
+import {
+	type Host,
+	hostsApi,
+	type Image,
+	imagesApi,
+	type Task,
+	tasksApi,
+} from "@/api/client";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { DataTable } from "@/components/ui/DataTable";
@@ -113,61 +120,80 @@ export function TasksPage() {
 		setIsShutdown(false);
 	}
 
-	const needsImage = ["deploy", "capture", "multicast", "debug_deploy", "debug_capture"].includes(taskType);
+	const needsImage = [
+		"deploy",
+		"capture",
+		"multicast",
+		"debug_deploy",
+		"debug_capture",
+	].includes(taskType);
 
-	const columns = useMemo(() => [
-		col.accessor("type", {
-			header: "Type",
-			cell: (info) => <span className="capitalize">{info.getValue().replace("_", " ")}</span>,
-		}),
-		col.accessor("hostId", {
-			header: "Host",
-			cell: (info) => <span className="font-mono text-xs">{info.getValue().slice(0, 8)}…</span>,
-		}),
-		col.accessor("state", {
-			header: "State",
-			cell: (info) => (
-				<Badge variant={stateVariant(info.getValue())}>{info.getValue()}</Badge>
-			),
-		}),
-		col.accessor("percentComplete", {
-			header: "Progress",
-			cell: (info) => {
-				const pct = info.getValue();
-				const state = info.row.original.state;
-				if (state === "complete") return "100%";
-				if (state !== "active" && state !== "queued") return "—";
-				return (
-					<div className="flex items-center gap-2">
-						<div className="h-2 w-24 rounded-full bg-gray-700">
-							<div
-								className="h-2 rounded-full bg-blue-500 transition-all"
-								style={{ width: `${Math.min(pct, 100)}%` }}
-							/>
+	const columns = useMemo(
+		() => [
+			col.accessor("type", {
+				header: "Type",
+				cell: (info) => (
+					<span className="capitalize">
+						{info.getValue().replace("_", " ")}
+					</span>
+				),
+			}),
+			col.accessor("hostId", {
+				header: "Host",
+				cell: (info) => (
+					<span className="font-mono text-xs">
+						{info.getValue().slice(0, 8)}…
+					</span>
+				),
+			}),
+			col.accessor("state", {
+				header: "State",
+				cell: (info) => (
+					<Badge variant={stateVariant(info.getValue())}>
+						{info.getValue()}
+					</Badge>
+				),
+			}),
+			col.accessor("percentComplete", {
+				header: "Progress",
+				cell: (info) => {
+					const pct = info.getValue();
+					const state = info.row.original.state;
+					if (state === "complete") return "100%";
+					if (state !== "active" && state !== "queued") return "—";
+					return (
+						<div className="flex items-center gap-2">
+							<div className="h-2 w-24 rounded-full bg-gray-700">
+								<div
+									className="h-2 rounded-full bg-blue-500 transition-all"
+									style={{ width: `${Math.min(pct, 100)}%` }}
+								/>
+							</div>
+							<span className="text-xs text-gray-400">{pct}%</span>
 						</div>
-						<span className="text-xs text-gray-400">{pct}%</span>
-					</div>
-				);
-			},
-		}),
-		col.accessor("createdAt", {
-			header: "Created",
-			cell: (info) => new Date(info.getValue()).toLocaleString(),
-		}),
-		col.display({
-			id: "actions",
-			cell: (info) =>
-				["active", "queued"].includes(info.row.original.state) ? (
-					<Button
-						variant="ghost"
-						size="icon"
-						onClick={() => cancelMutation.mutate(info.row.original.id)}
-					>
-						<XCircle className="h-4 w-4 text-red-400" />
-					</Button>
-				) : null,
-		}),
-	], [cancelMutation.mutate]);
+					);
+				},
+			}),
+			col.accessor("createdAt", {
+				header: "Created",
+				cell: (info) => new Date(info.getValue()).toLocaleString(),
+			}),
+			col.display({
+				id: "actions",
+				cell: (info) =>
+					["active", "queued"].includes(info.row.original.state) ? (
+						<Button
+							variant="ghost"
+							size="icon"
+							onClick={() => cancelMutation.mutate(info.row.original.id)}
+						>
+							<XCircle className="h-4 w-4 text-red-400" />
+						</Button>
+					) : null,
+			}),
+		],
+		[cancelMutation.mutate],
+	);
 
 	const table = useReactTable({
 		data: filtered,
@@ -233,20 +259,28 @@ export function TasksPage() {
 						className="flex flex-col gap-4"
 					>
 						<div className="flex flex-col gap-1">
-							<label className="text-xs text-gray-400">Task Type</label>
+							<label className="text-xs text-gray-400" htmlFor="task-type-select">
+								Task Type
+							</label>
 							<select
+								id="task-type-select"
 								value={taskType}
 								onChange={(e) => setTaskType(e.target.value)}
 								className={selectClass}
 							>
 								{TASK_TYPES.map((t) => (
-									<option key={t.value} value={t.value}>{t.label}</option>
+									<option key={t.value} value={t.value}>
+										{t.label}
+									</option>
 								))}
 							</select>
 						</div>
 						<div className="flex flex-col gap-1">
-							<label className="text-xs text-gray-400">Host</label>
+							<label className="text-xs text-gray-400" htmlFor="host-select">
+								Host
+							</label>
 							<select
+								id="host-select"
 								value={hostId}
 								onChange={(e) => setHostId(e.target.value)}
 								className={selectClass}
@@ -254,21 +288,28 @@ export function TasksPage() {
 							>
 								<option value="">Select a host…</option>
 								{(hostsData?.data ?? []).map((h: Host) => (
-									<option key={h.id} value={h.id}>{h.name} ({h.ip || "no IP"})</option>
+									<option key={h.id} value={h.id}>
+										{h.name} ({h.ip || "no IP"})
+									</option>
 								))}
 							</select>
 						</div>
 						{needsImage && (
 							<div className="flex flex-col gap-1">
-								<label className="text-xs text-gray-400">Image (optional — defaults to host&apos;s assigned image)</label>
+								<label className="text-xs text-gray-400" htmlFor="image-select">
+									Image (optional — defaults to host&apos;s assigned image)
+								</label>
 								<select
+								id="image-select"
 									value={imageId}
 									onChange={(e) => setImageId(e.target.value)}
 									className={selectClass}
 								>
 									<option value="">Use host&apos;s default image</option>
 									{(imagesData?.data ?? []).map((img: Image) => (
-										<option key={img.id} value={img.id}>{img.name}</option>
+										<option key={img.id} value={img.id}>
+											{img.name}
+										</option>
 									))}
 								</select>
 							</div>
@@ -280,13 +321,22 @@ export function TasksPage() {
 								checked={isShutdown}
 								onChange={(e) => setIsShutdown(e.target.checked)}
 							/>
-							<span className="text-sm text-gray-300">Shutdown after completion</span>
+							<span className="text-sm text-gray-300">
+								Shutdown after completion
+							</span>
 						</label>
 						<div className="flex justify-end gap-2">
-							<Button type="button" variant="outline" onClick={() => setOpen(false)}>
+							<Button
+								type="button"
+								variant="outline"
+								onClick={() => setOpen(false)}
+							>
 								Cancel
 							</Button>
-							<Button type="submit" disabled={createMutation.isPending || !hostId}>
+							<Button
+								type="submit"
+								disabled={createMutation.isPending || !hostId}
+							>
 								Create
 							</Button>
 						</div>

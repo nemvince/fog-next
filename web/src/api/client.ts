@@ -102,9 +102,7 @@ export interface Inventory {
 
 export const hostsApi = {
 	list: (page = 1, limit = 25) =>
-		api.get<{ data: Host[] }>(
-			`/api/v1/hosts?page=${page}&limit=${limit}`,
-		),
+		api.get<{ data: Host[] }>(`/api/v1/hosts?page=${page}&limit=${limit}`),
 	get: (id: string) => api.get<Host>(`/api/v1/hosts/${id}`),
 	create: (host: Partial<Host>) => api.post<Host>("/api/v1/hosts", host),
 	update: (id: string, host: Partial<Host>) =>
@@ -143,9 +141,7 @@ export interface Image {
 
 export const imagesApi = {
 	list: (page = 1, limit = 25) =>
-		api.get<{ data: Image[] }>(
-			`/api/v1/images?page=${page}&limit=${limit}`,
-		),
+		api.get<{ data: Image[] }>(`/api/v1/images?page=${page}&limit=${limit}`),
 	get: (id: string) => api.get<Image>(`/api/v1/images/${id}`),
 	create: (img: Partial<Image>) => api.post<Image>("/api/v1/images", img),
 	update: (id: string, img: Partial<Image>) =>
@@ -180,9 +176,7 @@ export interface Task {
 
 export const tasksApi = {
 	list: (page = 1, limit = 25) =>
-		api.get<{ data: Task[] }>(
-			`/api/v1/tasks?page=${page}&limit=${limit}`,
-		),
+		api.get<{ data: Task[] }>(`/api/v1/tasks?page=${page}&limit=${limit}`),
 	create: (task: Partial<Task>) => api.post<Task>("/api/v1/tasks", task),
 	cancel: (id: string) => api.delete<void>(`/api/v1/tasks/${id}`),
 };

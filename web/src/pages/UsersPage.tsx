@@ -1,3 +1,11 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+	createColumnHelper,
+	getCoreRowModel,
+	useReactTable,
+} from "@tanstack/react-table";
+import { Plus, RefreshCw, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
 import { type User, usersApi } from "@/api/client";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -10,14 +18,6 @@ import {
 } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
 import { toast } from "@/components/ui/Toast";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-	createColumnHelper,
-	getCoreRowModel,
-	useReactTable,
-} from "@tanstack/react-table";
-import { Plus, RefreshCw, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
 
 const col = createColumnHelper<User>();
 
@@ -74,55 +74,58 @@ export function UsersPage() {
 		onError: (e: Error) => toast(e.message, { variant: "destructive" }),
 	});
 
-	const columns = useMemo(() => [
-		col.accessor("username", { header: "Username" }),
-		col.accessor("role", {
-			header: "Role",
-			cell: (info) => (
-				<Badge variant={info.getValue() === "admin" ? "default" : "outline"}>
-					{info.getValue()}
-				</Badge>
-			),
-		}),
-		col.accessor("email", { header: "Email" }),
-		col.accessor("isActive", {
-			header: "Active",
-			cell: (info) => (
-				<Badge variant={info.getValue() ? "success" : "outline"}>
-					{info.getValue() ? "Yes" : "No"}
-				</Badge>
-			),
-		}),
-		col.accessor("lastLoginAt", {
-			header: "Last Login",
-			cell: (info) =>
-				info.getValue()
-					? new Date(info.getValue() as string).toLocaleString()
-					: "Never",
-		}),
-		col.display({
-			id: "actions",
-			cell: (info) => (
-				<div className="flex gap-1">
-					<Button
-						variant="ghost"
-						size="icon"
-						title="Regenerate API token"
-						onClick={() => regenMutation.mutate(info.row.original.id)}
-					>
-						<RefreshCw className="h-4 w-4 text-blue-400" />
-					</Button>
-					<Button
-						variant="ghost"
-						size="icon"
-						onClick={() => deleteMutation.mutate(info.row.original.id)}
-					>
-						<Trash2 className="h-4 w-4 text-red-400" />
-					</Button>
-				</div>
-			),
-		}),
-	], [deleteMutation.mutate, regenMutation.mutate]);
+	const columns = useMemo(
+		() => [
+			col.accessor("username", { header: "Username" }),
+			col.accessor("role", {
+				header: "Role",
+				cell: (info) => (
+					<Badge variant={info.getValue() === "admin" ? "default" : "outline"}>
+						{info.getValue()}
+					</Badge>
+				),
+			}),
+			col.accessor("email", { header: "Email" }),
+			col.accessor("isActive", {
+				header: "Active",
+				cell: (info) => (
+					<Badge variant={info.getValue() ? "success" : "outline"}>
+						{info.getValue() ? "Yes" : "No"}
+					</Badge>
+				),
+			}),
+			col.accessor("lastLoginAt", {
+				header: "Last Login",
+				cell: (info) =>
+					info.getValue()
+						? new Date(info.getValue() as string).toLocaleString()
+						: "Never",
+			}),
+			col.display({
+				id: "actions",
+				cell: (info) => (
+					<div className="flex gap-1">
+						<Button
+							variant="ghost"
+							size="icon"
+							title="Regenerate API token"
+							onClick={() => regenMutation.mutate(info.row.original.id)}
+						>
+							<RefreshCw className="h-4 w-4 text-blue-400" />
+						</Button>
+						<Button
+							variant="ghost"
+							size="icon"
+							onClick={() => deleteMutation.mutate(info.row.original.id)}
+						>
+							<Trash2 className="h-4 w-4 text-red-400" />
+						</Button>
+					</div>
+				),
+			}),
+		],
+		[deleteMutation.mutate, regenMutation.mutate],
+	);
 
 	const table = useReactTable({
 		data: data?.data ?? [],

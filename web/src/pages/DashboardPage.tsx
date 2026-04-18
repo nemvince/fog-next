@@ -1,5 +1,5 @@
-import { hostsApi, imagesApi, tasksApi } from "@/api/client";
 import { useQuery } from "@tanstack/react-query";
+import { hostsApi, imagesApi, tasksApi } from "@/api/client";
 
 export function DashboardPage() {
 	const { data: hosts } = useQuery({

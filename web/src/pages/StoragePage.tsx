@@ -1,3 +1,6 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Database, Plus, Server, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { storageApi } from "@/api/client";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -9,9 +12,6 @@ import {
 } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
 import { toast } from "@/components/ui/Toast";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Database, Plus, Server, Trash2 } from "lucide-react";
-import { useState } from "react";
 
 export function StoragePage() {
 	const qc = useQueryClient();

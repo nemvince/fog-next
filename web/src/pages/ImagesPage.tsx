@@ -3,19 +3,19 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { DataTable } from "@/components/ui/DataTable";
 import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
+	Dialog,
+	DialogContent,
+	DialogHeader,
+	DialogTitle,
 } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
 import { toast } from "@/components/ui/Toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-    createColumnHelper,
-    getCoreRowModel,
-    getSortedRowModel,
-    useReactTable,
+	createColumnHelper,
+	getCoreRowModel,
+	getSortedRowModel,
+	useReactTable,
 } from "@tanstack/react-table";
 import { Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -25,7 +25,12 @@ const col = createColumnHelper<Image>();
 export function ImagesPage() {
 	const qc = useQueryClient();
 	const [open, setOpen] = useState(false);
-	const [form, setForm] = useState({ name: "", description: "", path: "", partitions: "" });
+	const [form, setForm] = useState({
+		name: "",
+		description: "",
+		path: "",
+		partitions: "",
+	});
 	const [partitionsError, setPartitionsError] = useState("");
 
 	const { data, isLoading } = useQuery({
@@ -54,42 +59,45 @@ export function ImagesPage() {
 		onError: (e: Error) => toast(e.message, { variant: "destructive" }),
 	});
 
-	const columns = useMemo(() => [
-		col.accessor("name", { header: "Name" }),
-		col.accessor("path", { header: "Path" }),
-		col.accessor("sizeBytes", {
-			header: "Size",
-			cell: (info) => formatBytes(info.getValue()),
-		}),
-		col.accessor("isEnabled", {
-			header: "Enabled",
-			cell: (info) => (
-				<Badge variant={info.getValue() ? "success" : "outline"}>
-					{info.getValue() ? "Yes" : "No"}
-				</Badge>
-			),
-		}),
-		col.accessor("toReplicate", {
-			header: "Replicate",
-			cell: (info) => (
-				<Badge variant={info.getValue() ? "default" : "outline"}>
-					{info.getValue() ? "Yes" : "No"}
-				</Badge>
-			),
-		}),
-		col.display({
-			id: "actions",
-			cell: (info) => (
-				<Button
-					variant="ghost"
-					size="icon"
-					onClick={() => deleteMutation.mutate(info.row.original.id)}
-				>
-					<Trash2 className="h-4 w-4 text-red-400" />
-				</Button>
-			),
-		}),
-	], [deleteMutation.mutate]);
+	const columns = useMemo(
+		() => [
+			col.accessor("name", { header: "Name" }),
+			col.accessor("path", { header: "Path" }),
+			col.accessor("sizeBytes", {
+				header: "Size",
+				cell: (info) => formatBytes(info.getValue()),
+			}),
+			col.accessor("isEnabled", {
+				header: "Enabled",
+				cell: (info) => (
+					<Badge variant={info.getValue() ? "success" : "outline"}>
+						{info.getValue() ? "Yes" : "No"}
+					</Badge>
+				),
+			}),
+			col.accessor("toReplicate", {
+				header: "Replicate",
+				cell: (info) => (
+					<Badge variant={info.getValue() ? "default" : "outline"}>
+						{info.getValue() ? "Yes" : "No"}
+					</Badge>
+				),
+			}),
+			col.display({
+				id: "actions",
+				cell: (info) => (
+					<Button
+						variant="ghost"
+						size="icon"
+						onClick={() => deleteMutation.mutate(info.row.original.id)}
+					>
+						<Trash2 className="h-4 w-4 text-red-400" />
+					</Button>
+				),
+			}),
+		],
+		[deleteMutation.mutate],
+	);
 
 	const table = useReactTable({
 		data: data?.data ?? [],
@@ -123,7 +131,7 @@ export function ImagesPage() {
 					<form
 						onSubmit={(e) => {
 							e.preventDefault();
-							let partitions: unknown = undefined;
+							let partitions: unknown;
 							if (form.partitions.trim()) {
 								try {
 									partitions = JSON.parse(form.partitions) as unknown;
@@ -161,15 +169,23 @@ export function ImagesPage() {
 							required
 						/>
 						<div className="flex flex-col gap-1">
-							<label className="text-xs text-gray-400">Partitions (JSON, optional)</label>
+							<label className="text-xs text-gray-400" htmlFor="partitions-textarea">
+								Partitions (JSON, optional)
+							</label>
 							<textarea
+								id="partitions-textarea"
 								value={form.partitions}
-								onChange={(e) => { setPartitionsError(""); setForm({ ...form, partitions: e.target.value }); }}
+								onChange={(e) => {
+									setPartitionsError("");
+									setForm({ ...form, partitions: e.target.value });
+								}}
 								rows={4}
 								placeholder='[ { "type": "ext4", "size": 10240 } ]'
 								className="rounded-md border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 placeholder:text-gray-500 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-y"
 							/>
-							{partitionsError && <p className="text-xs text-red-400">{partitionsError}</p>}
+							{partitionsError && (
+								<p className="text-xs text-red-400">{partitionsError}</p>
+							)}
 						</div>
 						<div className="flex justify-end gap-2">
 							<Button

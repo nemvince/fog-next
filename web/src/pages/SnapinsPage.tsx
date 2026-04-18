@@ -1,16 +1,16 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+	createColumnHelper,
+	getCoreRowModel,
+	useReactTable,
+} from "@tanstack/react-table";
+import { Trash2, Upload } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
 import { type Snapin, snapinsApi } from "@/api/client";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { DataTable } from "@/components/ui/DataTable";
 import { toast } from "@/components/ui/Toast";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-    createColumnHelper,
-    getCoreRowModel,
-    useReactTable,
-} from "@tanstack/react-table";
-import { Trash2, Upload } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
 
 const col = createColumnHelper<Snapin>();
 
@@ -61,37 +61,40 @@ export function SnapinsPage() {
 		}
 	}
 
-	const columns = useMemo(() => [
-		col.accessor("name", { header: "Name" }),
-		col.accessor("fileName", { header: "File" }),
-		col.accessor("sizeBytes", {
-			header: "Size",
-			cell: (info) => {
-				const mb = info.getValue() / 1_048_576;
-				return info.getValue() ? `${mb.toFixed(1)} MB` : "—";
-			},
-		}),
-		col.accessor("isEnabled", {
-			header: "Enabled",
-			cell: (info) => (
-				<Badge variant={info.getValue() ? "success" : "outline"}>
-					{info.getValue() ? "Yes" : "No"}
-				</Badge>
-			),
-		}),
-		col.display({
-			id: "actions",
-			cell: (info) => (
-				<Button
-					variant="ghost"
-					size="icon"
-					onClick={() => deleteMutation.mutate(info.row.original.id)}
-				>
-					<Trash2 className="h-4 w-4 text-red-400" />
-				</Button>
-			),
-		}),
-	], [deleteMutation.mutate]);
+	const columns = useMemo(
+		() => [
+			col.accessor("name", { header: "Name" }),
+			col.accessor("fileName", { header: "File" }),
+			col.accessor("sizeBytes", {
+				header: "Size",
+				cell: (info) => {
+					const mb = info.getValue() / 1_048_576;
+					return info.getValue() ? `${mb.toFixed(1)} MB` : "—";
+				},
+			}),
+			col.accessor("isEnabled", {
+				header: "Enabled",
+				cell: (info) => (
+					<Badge variant={info.getValue() ? "success" : "outline"}>
+						{info.getValue() ? "Yes" : "No"}
+					</Badge>
+				),
+			}),
+			col.display({
+				id: "actions",
+				cell: (info) => (
+					<Button
+						variant="ghost"
+						size="icon"
+						onClick={() => deleteMutation.mutate(info.row.original.id)}
+					>
+						<Trash2 className="h-4 w-4 text-red-400" />
+					</Button>
+				),
+			}),
+		],
+		[deleteMutation.mutate],
+	);
 
 	const table = useReactTable({
 		data: data?.data ?? [],

@@ -1,12 +1,27 @@
-import { type Host, type Task, hostsApi, imagesApi, tasksApi } from "@/api/client";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+	ArrowLeft,
+	Download,
+	HardDrive,
+	Plus,
+	Trash2,
+	Upload,
+	Wifi,
+	WifiOff,
+} from "lucide-react";
+import { useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import {
+	type Host,
+	hostsApi,
+	imagesApi,
+	type Task,
+	tasksApi,
+} from "@/api/client";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { toast } from "@/components/ui/Toast";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Download, HardDrive, Plus, Trash2, Upload, Wifi, WifiOff } from "lucide-react";
-import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
 
 type Tab = "info" | "macs" | "inventory" | "tasks";
 
@@ -367,7 +382,9 @@ export function HostDetailPage() {
 									<div className="h-2 flex-1 rounded-full bg-gray-700">
 										<div
 											className="h-2 rounded-full bg-blue-500 transition-all"
-											style={{ width: `${Math.min(activeTask.percentComplete, 100)}%` }}
+											style={{
+												width: `${Math.min(activeTask.percentComplete, 100)}%`,
+											}}
 										/>
 									</div>
 									<span className="text-xs text-gray-400 w-10 text-right">
@@ -382,11 +399,16 @@ export function HostDetailPage() {
 
 					{/* Quick actions */}
 					<div>
-						<h3 className="text-sm font-medium text-gray-400 mb-3">Quick Actions</h3>
+						<h3 className="text-sm font-medium text-gray-400 mb-3">
+							Quick Actions
+						</h3>
 						<div className="flex flex-wrap gap-2">
 							<Button
 								onClick={() =>
-									createTaskMutation.mutate({ hostId: id as string, type: "deploy" })
+									createTaskMutation.mutate({
+										hostId: id as string,
+										type: "deploy",
+									})
 								}
 								disabled={!!activeTask || createTaskMutation.isPending}
 							>
@@ -395,7 +417,10 @@ export function HostDetailPage() {
 							<Button
 								variant="outline"
 								onClick={() =>
-									createTaskMutation.mutate({ hostId: id as string, type: "capture" })
+									createTaskMutation.mutate({
+										hostId: id as string,
+										type: "capture",
+									})
 								}
 								disabled={!!activeTask || createTaskMutation.isPending}
 							>
@@ -404,7 +429,10 @@ export function HostDetailPage() {
 							<Button
 								variant="outline"
 								onClick={() =>
-									createTaskMutation.mutate({ hostId: id as string, type: "debug_deploy" })
+									createTaskMutation.mutate({
+										hostId: id as string,
+										type: "debug_deploy",
+									})
 								}
 								disabled={!!activeTask || createTaskMutation.isPending}
 							>
@@ -413,7 +441,10 @@ export function HostDetailPage() {
 							<Button
 								variant="outline"
 								onClick={() =>
-									createTaskMutation.mutate({ hostId: id as string, type: "memtest" })
+									createTaskMutation.mutate({
+										hostId: id as string,
+										type: "memtest",
+									})
 								}
 								disabled={!!activeTask || createTaskMutation.isPending}
 							>
@@ -424,7 +455,9 @@ export function HostDetailPage() {
 
 					{/* Image assignment */}
 					<div>
-						<h3 className="text-sm font-medium text-gray-400 mb-3">Assigned Image</h3>
+						<h3 className="text-sm font-medium text-gray-400 mb-3">
+							Assigned Image
+						</h3>
 						<select
 							value={form.imageId ?? host.imageId ?? ""}
 							onChange={(e) =>
@@ -437,7 +470,9 @@ export function HostDetailPage() {
 						>
 							<option value="">No image assigned</option>
 							{(imagesData?.data ?? []).map((img) => (
-								<option key={img.id} value={img.id}>{img.name}</option>
+								<option key={img.id} value={img.id}>
+									{img.name}
+								</option>
 							))}
 						</select>
 						{form.imageId !== undefined && form.imageId !== host.imageId && (
