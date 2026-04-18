@@ -91,7 +91,9 @@ func buildKernelArgs(p BootParams, extraArgs string) string {
 		"console=ttyS0,115200",
 		// earlyprintk captures output before the full console subsystem is up,
 		// including early panics (e.g. initramfs decompression failures).
-		"earlyprintk=vga,keep",
+		// efi works on UEFI/OVMF; vga works on legacy BIOS — efi is the safe default
+		// for modern hardware and Proxmox Q35+OVMF VMs.
+		"earlyprintk=efi,keep",
 		fmt.Sprintf("fog_server=%s", p.ServerURL),
 	}
 	if p.Host != nil {
