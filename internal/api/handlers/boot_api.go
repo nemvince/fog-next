@@ -540,7 +540,7 @@ func partFilename(part int) string {
 // partCount returns the number of image partitions stored for an image.
 // Uses stored partition metadata if available, otherwise returns 1.
 func partCount(img *models.Image) int {
-	if img.Partitions != nil && len(*img.Partitions) > 0 {
+	if len(img.Partitions) > 0 {
 		// Partitions is a JSONB array; count the top-level elements.
 		// A simple heuristic: count '"' pairs divided by the minimum JSON
 		// per-object overhead is fragile — just default to 1 and trust the
