@@ -20,10 +20,10 @@ import { Route as AuthSettingsRouteImport } from './routes/_auth/settings'
 import { Route as AuthReportsRouteImport } from './routes/_auth/reports'
 import { Route as AuthPendingMacsRouteImport } from './routes/_auth/pending-macs'
 import { Route as AuthImagesRouteImport } from './routes/_auth/images'
-import { Route as AuthHostsRouteImport } from './routes/_auth/hosts'
 import { Route as AuthGroupsRouteImport } from './routes/_auth/groups'
 import { Route as AuthDashboardRouteImport } from './routes/_auth/dashboard'
-import { Route as AuthHostsIdRouteImport } from './routes/_auth/hosts.$id'
+import { Route as AuthHostsIndexRouteImport } from './routes/_auth/hosts/index'
+import { Route as AuthHostsIdRouteImport } from './routes/_auth/hosts/$id'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -79,11 +79,6 @@ const AuthImagesRoute = AuthImagesRouteImport.update({
   path: '/images',
   getParentRoute: () => AuthRoute,
 } as any)
-const AuthHostsRoute = AuthHostsRouteImport.update({
-  id: '/hosts',
-  path: '/hosts',
-  getParentRoute: () => AuthRoute,
-} as any)
 const AuthGroupsRoute = AuthGroupsRouteImport.update({
   id: '/groups',
   path: '/groups',
@@ -94,10 +89,15 @@ const AuthDashboardRoute = AuthDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthRoute,
 } as any)
+const AuthHostsIndexRoute = AuthHostsIndexRouteImport.update({
+  id: '/hosts/',
+  path: '/hosts/',
+  getParentRoute: () => AuthRoute,
+} as any)
 const AuthHostsIdRoute = AuthHostsIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => AuthHostsRoute,
+  id: '/hosts/$id',
+  path: '/hosts/$id',
+  getParentRoute: () => AuthRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -105,7 +105,6 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/dashboard': typeof AuthDashboardRoute
   '/groups': typeof AuthGroupsRoute
-  '/hosts': typeof AuthHostsRouteWithChildren
   '/images': typeof AuthImagesRoute
   '/pending-macs': typeof AuthPendingMacsRoute
   '/reports': typeof AuthReportsRoute
@@ -115,13 +114,13 @@ export interface FileRoutesByFullPath {
   '/tasks': typeof AuthTasksRoute
   '/users': typeof AuthUsersRoute
   '/hosts/$id': typeof AuthHostsIdRoute
+  '/hosts/': typeof AuthHostsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/dashboard': typeof AuthDashboardRoute
   '/groups': typeof AuthGroupsRoute
-  '/hosts': typeof AuthHostsRouteWithChildren
   '/images': typeof AuthImagesRoute
   '/pending-macs': typeof AuthPendingMacsRoute
   '/reports': typeof AuthReportsRoute
@@ -131,6 +130,7 @@ export interface FileRoutesByTo {
   '/tasks': typeof AuthTasksRoute
   '/users': typeof AuthUsersRoute
   '/hosts/$id': typeof AuthHostsIdRoute
+  '/hosts': typeof AuthHostsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -139,7 +139,6 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_auth/dashboard': typeof AuthDashboardRoute
   '/_auth/groups': typeof AuthGroupsRoute
-  '/_auth/hosts': typeof AuthHostsRouteWithChildren
   '/_auth/images': typeof AuthImagesRoute
   '/_auth/pending-macs': typeof AuthPendingMacsRoute
   '/_auth/reports': typeof AuthReportsRoute
@@ -149,6 +148,7 @@ export interface FileRoutesById {
   '/_auth/tasks': typeof AuthTasksRoute
   '/_auth/users': typeof AuthUsersRoute
   '/_auth/hosts/$id': typeof AuthHostsIdRoute
+  '/_auth/hosts/': typeof AuthHostsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -157,7 +157,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/dashboard'
     | '/groups'
-    | '/hosts'
     | '/images'
     | '/pending-macs'
     | '/reports'
@@ -167,13 +166,13 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/users'
     | '/hosts/$id'
+    | '/hosts/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
     | '/dashboard'
     | '/groups'
-    | '/hosts'
     | '/images'
     | '/pending-macs'
     | '/reports'
@@ -183,6 +182,7 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/users'
     | '/hosts/$id'
+    | '/hosts'
   id:
     | '__root__'
     | '/'
@@ -190,7 +190,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/_auth/dashboard'
     | '/_auth/groups'
-    | '/_auth/hosts'
     | '/_auth/images'
     | '/_auth/pending-macs'
     | '/_auth/reports'
@@ -200,6 +199,7 @@ export interface FileRouteTypes {
     | '/_auth/tasks'
     | '/_auth/users'
     | '/_auth/hosts/$id'
+    | '/_auth/hosts/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -287,13 +287,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthImagesRouteImport
       parentRoute: typeof AuthRoute
     }
-    '/_auth/hosts': {
-      id: '/_auth/hosts'
-      path: '/hosts'
-      fullPath: '/hosts'
-      preLoaderRoute: typeof AuthHostsRouteImport
-      parentRoute: typeof AuthRoute
-    }
     '/_auth/groups': {
       id: '/_auth/groups'
       path: '/groups'
@@ -308,32 +301,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthDashboardRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_auth/hosts/': {
+      id: '/_auth/hosts/'
+      path: '/hosts'
+      fullPath: '/hosts/'
+      preLoaderRoute: typeof AuthHostsIndexRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/_auth/hosts/$id': {
       id: '/_auth/hosts/$id'
-      path: '/$id'
+      path: '/hosts/$id'
       fullPath: '/hosts/$id'
       preLoaderRoute: typeof AuthHostsIdRouteImport
-      parentRoute: typeof AuthHostsRoute
+      parentRoute: typeof AuthRoute
     }
   }
 }
 
-interface AuthHostsRouteChildren {
-  AuthHostsIdRoute: typeof AuthHostsIdRoute
-}
-
-const AuthHostsRouteChildren: AuthHostsRouteChildren = {
-  AuthHostsIdRoute: AuthHostsIdRoute,
-}
-
-const AuthHostsRouteWithChildren = AuthHostsRoute._addFileChildren(
-  AuthHostsRouteChildren,
-)
-
 interface AuthRouteChildren {
   AuthDashboardRoute: typeof AuthDashboardRoute
   AuthGroupsRoute: typeof AuthGroupsRoute
-  AuthHostsRoute: typeof AuthHostsRouteWithChildren
   AuthImagesRoute: typeof AuthImagesRoute
   AuthPendingMacsRoute: typeof AuthPendingMacsRoute
   AuthReportsRoute: typeof AuthReportsRoute
@@ -342,12 +329,13 @@ interface AuthRouteChildren {
   AuthStorageRoute: typeof AuthStorageRoute
   AuthTasksRoute: typeof AuthTasksRoute
   AuthUsersRoute: typeof AuthUsersRoute
+  AuthHostsIdRoute: typeof AuthHostsIdRoute
+  AuthHostsIndexRoute: typeof AuthHostsIndexRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
   AuthDashboardRoute: AuthDashboardRoute,
   AuthGroupsRoute: AuthGroupsRoute,
-  AuthHostsRoute: AuthHostsRouteWithChildren,
   AuthImagesRoute: AuthImagesRoute,
   AuthPendingMacsRoute: AuthPendingMacsRoute,
   AuthReportsRoute: AuthReportsRoute,
@@ -356,6 +344,8 @@ const AuthRouteChildren: AuthRouteChildren = {
   AuthStorageRoute: AuthStorageRoute,
   AuthTasksRoute: AuthTasksRoute,
   AuthUsersRoute: AuthUsersRoute,
+  AuthHostsIdRoute: AuthHostsIdRoute,
+  AuthHostsIndexRoute: AuthHostsIndexRoute,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)

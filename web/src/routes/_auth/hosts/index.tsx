@@ -38,7 +38,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import * as z from "zod";
 
-export const Route = createFileRoute("/_auth/hosts")({
+export const Route = createFileRoute("/_auth/hosts/")({
 	component: HostsPage,
 });
 
