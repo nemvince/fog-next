@@ -512,6 +512,7 @@ func (h *BootAPI) downloadLocal(w http.ResponseWriter, r *http.Request, img *mod
 }
 
 // uploadLocal writes an image part directly to cfg.Storage.BasePath.
+// It writes to a temp file first, then renames for atomic replacement.
 func (h *BootAPI) uploadLocal(w http.ResponseWriter, r *http.Request, img *models.Image, partNum int) {
 	base := filepath.Clean(h.cfg.Storage.BasePath)
 	dir := filepath.Join(base, filepath.FromSlash(img.Path))
@@ -525,15 +526,26 @@ func (h *BootAPI) uploadLocal(w http.ResponseWriter, r *http.Request, img *model
 		return
 	}
 	dest := filepath.Join(dir, partFilename(partNum))
-	f, err := os.Create(dest)
+	tmp, err := os.CreateTemp(dir, ".upload-*")
 	if err != nil {
-		slog.Error("upload local: create", "path", dest, "err", err)
+		slog.Error("upload local: create temp", "dir", dir, "err", err)
 		response.InternalError(w)
 		return
 	}
-	defer f.Close()
-	if _, err := io.Copy(f, r.Body); err != nil {
-		slog.Error("upload local: write", "path", dest, "err", err)
+	tmpName := tmp.Name()
+	defer func() { _ = os.Remove(tmpName) }()
+
+	if _, err := io.Copy(tmp, r.Body); err != nil {
+		tmp.Close()
+		slog.Warn("upload local: read body", "path", dest, "err", err)
+		response.InternalError(w)
+		return
+	}
+	tmp.Close()
+
+	if err := os.Rename(tmpName, dest); err != nil {
+		slog.Error("upload local: rename", "tmp", tmpName, "dest", dest, "err", err)
+		response.InternalError(w)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
