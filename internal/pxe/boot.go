@@ -85,6 +85,10 @@ func BootParamsForMAC(ctx context.Context, st store.Store, mac, serverURL string
 // buildKernelArgs assembles the kernel command-line string.
 func buildKernelArgs(p BootParams, extraArgs string) string {
 	parts := []string{
+		// Always include console targets so kernel/fos-agent output is visible.
+		// tty0 = VGA, ttyS0 = serial (both are no-ops if the hw isn't present).
+		"console=tty0",
+		"console=ttyS0,115200",
 		fmt.Sprintf("fog_server=%s", p.ServerURL),
 	}
 	if p.Host != nil {
