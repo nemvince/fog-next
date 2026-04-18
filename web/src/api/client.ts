@@ -64,6 +64,8 @@ export interface Host {
 	useWol: boolean;
 	lastContact?: string;
 	deployedAt?: string;
+	createdAt: string;
+	updatedAt: string;
 	macs?: HostMAC[];
 }
 
@@ -74,9 +76,12 @@ export interface HostMAC {
 	description: string;
 	isPrimary: boolean;
 	isIgnored: boolean;
+	createdAt: string;
 }
 
 export interface Inventory {
+	id: string;
+	hostId: string;
 	cpuModel: string;
 	cpuCores: number;
 	cpuFreqMhz: number;
@@ -88,12 +93,16 @@ export interface Inventory {
 	serial: string;
 	uuid: string;
 	biosVersion: string;
+	primaryMac: string;
 	osName: string;
+	osVersion: string;
+	createdAt: string;
+	updatedAt: string;
 }
 
 export const hostsApi = {
 	list: (page = 1, limit = 25) =>
-		api.get<{ data: Host[]; total: number }>(
+		api.get<{ data: Host[] }>(
 			`/api/v1/hosts?page=${page}&limit=${limit}`,
 		),
 	get: (id: string) => api.get<Host>(`/api/v1/hosts/${id}`),
@@ -110,7 +119,7 @@ export const hostsApi = {
 	getInventory: (id: string) =>
 		api.get<Inventory>(`/api/v1/hosts/${id}/inventory`),
 	getActiveTask: (id: string) =>
-		api.get<import("./client").Task | null>(`/api/v1/hosts/${id}/task`),
+		api.get<Task | null>(`/api/v1/hosts/${id}/task`),
 };
 
 // ─── Images ──────────────────────────────────────────────────────────────────
@@ -120,14 +129,20 @@ export interface Image {
 	name: string;
 	description: string;
 	path: string;
+	osTypeId?: string;
+	imageTypeId?: string;
+	storageGroupId?: string;
 	isEnabled: boolean;
 	toReplicate: boolean;
 	sizeBytes: number;
+	createdAt: string;
+	createdBy: string;
+	updatedAt: string;
 }
 
 export const imagesApi = {
 	list: (page = 1, limit = 25) =>
-		api.get<{ data: Image[]; total: number }>(
+		api.get<{ data: Image[] }>(
 			`/api/v1/images?page=${page}&limit=${limit}`,
 		),
 	get: (id: string) => api.get<Image>(`/api/v1/images/${id}`),
@@ -141,17 +156,30 @@ export const imagesApi = {
 
 export interface Task {
 	id: string;
-	hostId: string;
-	imageId: string;
+	name: string;
 	type: string;
 	state: string;
-	createdAt: string;
+	hostId: string;
+	imageId?: string;
+	storageNodeId?: string;
+	storageGroupId?: string;
+	isGroup: boolean;
+	isForced: boolean;
+	isShutdown: boolean;
+	percentComplete: number;
+	bitsPerMinute: number;
+	bytesTransferred: number;
 	scheduledAt?: string;
+	startedAt?: string;
+	completedAt?: string;
+	createdAt: string;
+	createdBy: string;
+	updatedAt: string;
 }
 
 export const tasksApi = {
 	list: (page = 1, limit = 25) =>
-		api.get<{ data: Task[]; total: number }>(
+		api.get<{ data: Task[] }>(
 			`/api/v1/tasks?page=${page}&limit=${limit}`,
 		),
 	create: (task: Partial<Task>) => api.post<Task>("/api/v1/tasks", task),
@@ -165,22 +193,26 @@ export interface Group {
 	name: string;
 	description: string;
 	createdAt: string;
+	createdBy: string;
+	updatedAt: string;
+	hostCount?: number;
 }
 
 export interface GroupMember {
-	hostId: string;
+	id: string;
 	groupId: string;
+	hostId: string;
 }
 
 export const groupsApi = {
-	list: () => api.get<{ data: Group[]; total: number }>("/api/v1/groups"),
+	list: () => api.get<{ data: Group[] }>("/api/v1/groups"),
 	get: (id: string) => api.get<Group>(`/api/v1/groups/${id}`),
 	create: (g: Partial<Group>) => api.post<Group>("/api/v1/groups", g),
 	update: (id: string, g: Partial<Group>) =>
 		api.put<Group>(`/api/v1/groups/${id}`, g),
 	delete: (id: string) => api.delete<void>(`/api/v1/groups/${id}`),
 	listMembers: (id: string) =>
-		api.get<{ data: Host[] }>(`/api/v1/groups/${id}/members`),
+		api.get<{ data: GroupMember[] }>(`/api/v1/groups/${id}/members`),
 	addMember: (id: string, hostId: string) =>
 		api.post<void>(`/api/v1/groups/${id}/members`, { hostId }),
 	removeMember: (id: string, hostId: string) =>
@@ -193,14 +225,22 @@ export interface Snapin {
 	id: string;
 	name: string;
 	description: string;
-	file: string;
+	fileName: string;
+	filePath: string;
+	command: string;
+	arguments: string;
+	runWith: string;
+	hash: string;
+	sizeBytes: number;
 	isEnabled: boolean;
 	toReplicate: boolean;
-	sizeBytes: number;
+	createdAt: string;
+	createdBy: string;
+	updatedAt: string;
 }
 
 export const snapinsApi = {
-	list: () => api.get<{ data: Snapin[]; total: number }>("/api/v1/snapins"),
+	list: () => api.get<{ data: Snapin[] }>("/api/v1/snapins"),
 	get: (id: string) => api.get<Snapin>(`/api/v1/snapins/${id}`),
 	create: (s: Partial<Snapin>) => api.post<Snapin>("/api/v1/snapins", s),
 	update: (id: string, s: Partial<Snapin>) =>
@@ -214,16 +254,24 @@ export interface StorageGroup {
 	id: string;
 	name: string;
 	description: string;
+	createdAt: string;
+	updatedAt: string;
 }
 
 export interface StorageNode {
 	id: string;
-	groupId: string;
 	name: string;
-	host: string;
-	path: string;
-	isMaster: boolean;
+	description: string;
+	storageGroupId: string;
+	hostname: string;
+	rootPath: string;
 	isEnabled: boolean;
+	isMaster: boolean;
+	maxClients: number;
+	sshUser: string;
+	webRoot: string;
+	createdAt: string;
+	updatedAt: string;
 }
 
 export const storageApi = {
@@ -246,6 +294,9 @@ export interface User {
 	role: string;
 	email: string;
 	isActive: boolean;
+	createdAt: string;
+	createdBy: string;
+	updatedAt: string;
 	lastLoginAt?: string;
 }
 
@@ -265,22 +316,21 @@ export const usersApi = {
 export interface ImagingLogEntry {
 	id: string;
 	hostId: string;
-	hostName: string;
-	imageName: string;
+	taskId: string;
 	taskType: string;
-	state: string;
-	startedAt: string;
-	finishedAt?: string;
-	bytesTransferred: number;
+	imageId?: string;
+	sizeBytes: number;
+	duration: number;
+	createdAt: string;
 }
 
 export const reportsApi = {
 	imagingHistory: (page = 1, limit = 50) =>
-		api.get<{ data: ImagingLogEntry[]; total: number }>(
+		api.get<{ data: ImagingLogEntry[] }>(
 			`/api/v1/reports/imaging?page=${page}&limit=${limit}`,
 		),
 	hostInventory: (page = 1, limit = 50) =>
-		api.get<{ data: (Host & { inventory: Inventory })[]; total: number }>(
+		api.get<{ data: (Host & { inventory: Inventory })[] }>(
 			`/api/v1/reports/inventory?page=${page}&limit=${limit}`,
 		),
 };

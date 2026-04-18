@@ -1,38 +1,38 @@
-import { useQuery } from "@tanstack/react-query";
-import {
-	createColumnHelper,
-	flexRender,
-	getCoreRowModel,
-	useReactTable,
-} from "@tanstack/react-table";
-import { useNavigate } from "react-router-dom";
 import { type Host, hostsApi } from "@/api/client";
 import { Badge } from "@/components/ui/Badge";
+import { useQuery } from "@tanstack/react-query";
+import {
+    createColumnHelper,
+    flexRender,
+    getCoreRowModel,
+    useReactTable,
+} from "@tanstack/react-table";
+import { useNavigate } from "react-router-dom";
 
 const col = createColumnHelper<Host>();
 
+const columns = [
+	col.accessor("name", { header: "Name" }),
+	col.accessor("ip", { header: "IP Address" }),
+	col.accessor("isEnabled", {
+		header: "Enabled",
+		cell: (info) => (
+			<Badge variant={info.getValue() ? "success" : "outline"}>
+				{info.getValue() ? "Yes" : "No"}
+			</Badge>
+		),
+	}),
+	col.accessor("lastContact", {
+		header: "Last Contact",
+		cell: (info) => {
+			const v = info.getValue();
+			return v ? new Date(v).toLocaleString() : "Never";
+		},
+	}),
+];
+
 export function HostsPage() {
 	const navigate = useNavigate();
-
-	const columns = [
-		col.accessor("name", { header: "Name" }),
-		col.accessor("ip", { header: "IP Address" }),
-		col.accessor("isEnabled", {
-			header: "Enabled",
-			cell: (info) => (
-				<Badge variant={info.getValue() ? "success" : "outline"}>
-					{info.getValue() ? "Yes" : "No"}
-				</Badge>
-			),
-		}),
-		col.accessor("lastContact", {
-			header: "Last Contact",
-			cell: (info) => {
-				const v = info.getValue();
-				return v ? new Date(v).toLocaleString() : "Never";
-			},
-		}),
-	];
 
 	const { data, isLoading, error } = useQuery({
 		queryKey: ["hosts"],

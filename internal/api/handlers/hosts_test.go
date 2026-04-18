@@ -151,12 +151,14 @@ func TestHosts_List(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", w.Code)
 	}
-	var list []*models.Host
+	var list struct {
+		Data []*models.Host `json:"data"`
+	}
 	if err := json.NewDecoder(w.Body).Decode(&list); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if len(list) != 2 {
-		t.Errorf("expected 2 hosts, got %d", len(list))
+	if len(list.Data) != 2 {
+		t.Errorf("expected 2 hosts, got %d", len(list.Data))
 	}
 }
 

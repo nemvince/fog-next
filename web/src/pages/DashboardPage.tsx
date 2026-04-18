@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
 import { hostsApi, imagesApi, tasksApi } from "@/api/client";
+import { useQuery } from "@tanstack/react-query";
 
 export function DashboardPage() {
 	const { data: hosts } = useQuery({
@@ -16,9 +16,9 @@ export function DashboardPage() {
 	});
 
 	const stats = [
-		{ label: "Hosts", value: hosts?.total ?? "–" },
-		{ label: "Images", value: images?.total ?? "–" },
-		{ label: "Active Tasks", value: tasks?.total ?? "–" },
+		{ label: "Hosts", value: hosts?.data?.length ?? "–" },
+		{ label: "Images", value: images?.data?.length ?? "–" },
+		{ label: "Active Tasks", value: tasks?.data?.length ?? "–" },
 	];
 
 	return (

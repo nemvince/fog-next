@@ -1,24 +1,24 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-	createColumnHelper,
-	getCoreRowModel,
-	getSortedRowModel,
-	useReactTable,
-} from "@tanstack/react-table";
-import { Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
 import { type Image, imagesApi } from "@/api/client";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { DataTable } from "@/components/ui/DataTable";
 import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
 } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
 import { toast } from "@/components/ui/Toast";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+    createColumnHelper,
+    getCoreRowModel,
+    getSortedRowModel,
+    useReactTable,
+} from "@tanstack/react-table";
+import { Plus, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
 
 const col = createColumnHelper<Image>();
 
@@ -52,7 +52,7 @@ export function ImagesPage() {
 		onError: (e: Error) => toast(e.message, { variant: "destructive" }),
 	});
 
-	const columns = [
+	const columns = useMemo(() => [
 		col.accessor("name", { header: "Name" }),
 		col.accessor("path", { header: "Path" }),
 		col.accessor("sizeBytes", {
@@ -87,7 +87,7 @@ export function ImagesPage() {
 				</Button>
 			),
 		}),
-	];
+	], [deleteMutation.mutate]);
 
 	const table = useReactTable({
 		data: data?.data ?? [],

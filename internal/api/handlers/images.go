@@ -29,7 +29,7 @@ func (h *Images) List(w http.ResponseWriter, r *http.Request) {
 		response.InternalError(w)
 		return
 	}
-	response.OK(w, images)
+	response.OK(w, response.ListOf(images))
 }
 
 func (h *Images) Get(w http.ResponseWriter, r *http.Request) {

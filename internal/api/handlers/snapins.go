@@ -55,7 +55,7 @@ func (h *Snapins) List(w http.ResponseWriter, r *http.Request) {
 		response.InternalError(w)
 		return
 	}
-	response.OK(w, snapins)
+	response.OK(w, response.ListOf(snapins))
 }
 
 func (h *Snapins) Get(w http.ResponseWriter, r *http.Request) {

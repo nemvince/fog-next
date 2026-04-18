@@ -1,16 +1,16 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-	createColumnHelper,
-	getCoreRowModel,
-	useReactTable,
-} from "@tanstack/react-table";
-import { Trash2, Upload } from "lucide-react";
-import { useRef, useState } from "react";
 import { type Snapin, snapinsApi } from "@/api/client";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { DataTable } from "@/components/ui/DataTable";
 import { toast } from "@/components/ui/Toast";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+    createColumnHelper,
+    getCoreRowModel,
+    useReactTable,
+} from "@tanstack/react-table";
+import { Trash2, Upload } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
 
 const col = createColumnHelper<Snapin>();
 
@@ -61,9 +61,9 @@ export function SnapinsPage() {
 		}
 	}
 
-	const columns = [
+	const columns = useMemo(() => [
 		col.accessor("name", { header: "Name" }),
-		col.accessor("file", { header: "File" }),
+		col.accessor("fileName", { header: "File" }),
 		col.accessor("sizeBytes", {
 			header: "Size",
 			cell: (info) => {
@@ -91,7 +91,7 @@ export function SnapinsPage() {
 				</Button>
 			),
 		}),
-	];
+	], [deleteMutation.mutate]);
 
 	const table = useReactTable({
 		data: data?.data ?? [],

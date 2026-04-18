@@ -11,12 +11,17 @@ interface WSEvent {
 export function useServerEvents() {
 	const qc = useQueryClient();
 	const wsRef = useRef<WebSocket | null>(null);
+	const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 	useEffect(() => {
+		let stopped = false;
+
 		const proto = window.location.protocol === "https:" ? "wss" : "ws";
-		const url = `${proto}://${window.location.host}/api/v1/ws`;
+		const url = `${proto}://${window.location.host}/fog/api/v1/ws`;
 
 		const connect = () => {
+			if (stopped) return;
+
 			const ws = new WebSocket(url);
 			wsRef.current = ws;
 
@@ -34,15 +39,21 @@ export function useServerEvents() {
 			};
 
 			ws.onclose = () => {
-				// Reconnect after 3 seconds
-				setTimeout(connect, 3000);
+				if (stopped) return;
+				timerRef.current = setTimeout(connect, 3000);
 			};
 		};
 
 		connect();
 
 		return () => {
+			stopped = true;
+			if (timerRef.current !== null) {
+				clearTimeout(timerRef.current);
+				timerRef.current = null;
+			}
 			wsRef.current?.close();
+			wsRef.current = null;
 		};
 	}, [qc]);
 }

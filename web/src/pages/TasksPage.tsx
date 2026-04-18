@@ -1,3 +1,9 @@
+import { type Task, tasksApi } from "@/api/client";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { DataTable } from "@/components/ui/DataTable";
+import { toast } from "@/components/ui/Toast";
+import { useServerEvents } from "@/hooks/useServerEvents";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	createColumnHelper,
@@ -5,13 +11,7 @@ import {
 	useReactTable,
 } from "@tanstack/react-table";
 import { XCircle } from "lucide-react";
-import { useState } from "react";
-import { type Task, tasksApi } from "@/api/client";
-import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
-import { DataTable } from "@/components/ui/DataTable";
-import { toast } from "@/components/ui/Toast";
-import { useServerEvents } from "@/hooks/useServerEvents";
+import { useMemo, useState } from "react";
 
 const stateVariant = (
 	state: string,
@@ -61,7 +61,7 @@ export function TasksPage() {
 		onError: (e: Error) => toast(e.message, { variant: "destructive" }),
 	});
 
-	const columns = [
+	const columns = useMemo(() => [
 		col.accessor("type", { header: "Type" }),
 		col.accessor("hostId", { header: "Host ID" }),
 		col.accessor("state", {
@@ -87,7 +87,7 @@ export function TasksPage() {
 					</Button>
 				) : null,
 		}),
-	];
+	], [cancelMutation.mutate]);
 
 	const table = useReactTable({
 		data: filtered,

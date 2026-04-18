@@ -33,7 +33,7 @@ func (h *Hosts) List(w http.ResponseWriter, r *http.Request) {
 		response.InternalError(w)
 		return
 	}
-	response.OK(w, hosts)
+	response.OK(w, response.ListOf(hosts))
 }
 
 func (h *Hosts) Get(w http.ResponseWriter, r *http.Request) {
@@ -129,7 +129,7 @@ func (h *Hosts) ListMACs(w http.ResponseWriter, r *http.Request) {
 		response.InternalError(w)
 		return
 	}
-	response.OK(w, macs)
+	response.OK(w, response.ListOf(macs))
 }
 
 func (h *Hosts) AddMAC(w http.ResponseWriter, r *http.Request) {
@@ -205,5 +205,5 @@ func (h *Hosts) ListPendingMACs(w http.ResponseWriter, r *http.Request) {
 		response.InternalError(w)
 		return
 	}
-	response.OK(w, macs)
+	response.OK(w, response.ListOf(macs))
 }

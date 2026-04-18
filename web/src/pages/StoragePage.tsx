@@ -1,6 +1,3 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Database, Plus, Server, Trash2 } from "lucide-react";
-import { useState } from "react";
 import { storageApi } from "@/api/client";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -12,6 +9,9 @@ import {
 } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
 import { toast } from "@/components/ui/Toast";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Database, Plus, Server, Trash2 } from "lucide-react";
+import { useState } from "react";
 
 export function StoragePage() {
 	const qc = useQueryClient();
@@ -21,8 +21,8 @@ export function StoragePage() {
 	const [groupForm, setGroupForm] = useState({ name: "", description: "" });
 	const [nodeForm, setNodeForm] = useState({
 		name: "",
-		host: "",
-		path: "",
+		hostname: "",
+		rootPath: "",
 		isMaster: false,
 	});
 
@@ -52,9 +52,9 @@ export function StoragePage() {
 
 	const deleteGroup = useMutation({
 		mutationFn: (id: string) => storageApi.deleteGroup(id),
-		onSuccess: () => {
+		onSuccess: (_, variables) => {
 			void qc.invalidateQueries({ queryKey: ["storage-groups"] });
-			if (selectedGroup === deleteGroup.variables) setSelectedGroup(null);
+			if (selectedGroup === variables) setSelectedGroup(null);
 			toast("Group deleted");
 		},
 		onError: (e: Error) => toast(e.message, { variant: "destructive" }),
@@ -65,7 +65,7 @@ export function StoragePage() {
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: ["storage-nodes", selectedGroup] });
 			setNodeDialog(false);
-			setNodeForm({ name: "", host: "", path: "", isMaster: false });
+			setNodeForm({ name: "", hostname: "", rootPath: "", isMaster: false });
 			toast("Storage node created", { variant: "success" });
 		},
 		onError: (e: Error) => toast(e.message, { variant: "destructive" }),
@@ -172,8 +172,8 @@ export function StoragePage() {
 											)}
 										</div>
 										<p className="text-xs text-gray-500">
-											{n.host}
-											{n.path}
+											{n.hostname}
+											{n.rootPath}
 										</p>
 									</div>
 									<Button
@@ -261,17 +261,17 @@ export function StoragePage() {
 						/>
 						<Input
 							label="Hostname / IP"
-							value={nodeForm.host}
+							value={nodeForm.hostname}
 							onChange={(e) =>
-								setNodeForm({ ...nodeForm, host: e.target.value })
+								setNodeForm({ ...nodeForm, hostname: e.target.value })
 							}
 							required
 						/>
 						<Input
 							label="Storage path"
-							value={nodeForm.path}
+							value={nodeForm.rootPath}
 							onChange={(e) =>
-								setNodeForm({ ...nodeForm, path: e.target.value })
+								setNodeForm({ ...nodeForm, rootPath: e.target.value })
 							}
 							required
 						/>

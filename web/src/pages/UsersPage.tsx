@@ -1,11 +1,3 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-	createColumnHelper,
-	getCoreRowModel,
-	useReactTable,
-} from "@tanstack/react-table";
-import { Plus, RefreshCw, Trash2 } from "lucide-react";
-import { useState } from "react";
 import { type User, usersApi } from "@/api/client";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -18,6 +10,14 @@ import {
 } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
 import { toast } from "@/components/ui/Toast";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+	createColumnHelper,
+	getCoreRowModel,
+	useReactTable,
+} from "@tanstack/react-table";
+import { Plus, RefreshCw, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
 
 const col = createColumnHelper<User>();
 
@@ -74,7 +74,7 @@ export function UsersPage() {
 		onError: (e: Error) => toast(e.message, { variant: "destructive" }),
 	});
 
-	const columns = [
+	const columns = useMemo(() => [
 		col.accessor("username", { header: "Username" }),
 		col.accessor("role", {
 			header: "Role",
@@ -122,7 +122,7 @@ export function UsersPage() {
 				</div>
 			),
 		}),
-	];
+	], [deleteMutation.mutate, regenMutation.mutate]);
 
 	const table = useReactTable({
 		data: data?.data ?? [],

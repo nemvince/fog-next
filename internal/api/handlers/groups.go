@@ -22,7 +22,7 @@ func (h *Groups) List(w http.ResponseWriter, r *http.Request) {
 		response.InternalError(w)
 		return
 	}
-	response.OK(w, groups)
+	response.OK(w, response.ListOf(groups))
 }
 
 func (h *Groups) Get(w http.ResponseWriter, r *http.Request) {
@@ -105,7 +105,7 @@ func (h *Groups) ListMembers(w http.ResponseWriter, r *http.Request) {
 		response.InternalError(w)
 		return
 	}
-	response.OK(w, members)
+	response.OK(w, response.ListOf(members))
 }
 
 func (h *Groups) AddMember(w http.ResponseWriter, r *http.Request) {

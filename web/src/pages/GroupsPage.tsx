@@ -1,22 +1,22 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-	createColumnHelper,
-	getCoreRowModel,
-	useReactTable,
-} from "@tanstack/react-table";
-import { Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
 import { type Group, groupsApi } from "@/api/client";
 import { Button } from "@/components/ui/Button";
 import { DataTable } from "@/components/ui/DataTable";
 import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
 } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
 import { toast } from "@/components/ui/Toast";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+    createColumnHelper,
+    getCoreRowModel,
+    useReactTable,
+} from "@tanstack/react-table";
+import { Plus, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
 
 const col = createColumnHelper<Group>();
 
@@ -50,7 +50,7 @@ export function GroupsPage() {
 		onError: (e: Error) => toast(e.message, { variant: "destructive" }),
 	});
 
-	const columns = [
+	const columns = useMemo(() => [
 		col.accessor("name", { header: "Name" }),
 		col.accessor("description", { header: "Description" }),
 		col.accessor("createdAt", {
@@ -69,7 +69,7 @@ export function GroupsPage() {
 				</Button>
 			),
 		}),
-	];
+	], [deleteMutation.mutate]);
 
 	const table = useReactTable({
 		data: data?.data ?? [],

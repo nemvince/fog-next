@@ -22,7 +22,7 @@ func (h *Storage) ListGroups(w http.ResponseWriter, r *http.Request) {
 		response.InternalError(w)
 		return
 	}
-	response.OK(w, groups)
+	response.OK(w, response.ListOf(groups))
 }
 
 func (h *Storage) GetGroup(w http.ResponseWriter, r *http.Request) {
@@ -103,7 +103,7 @@ func (h *Storage) ListNodes(w http.ResponseWriter, r *http.Request) {
 		response.InternalError(w)
 		return
 	}
-	response.OK(w, nodes)
+	response.OK(w, response.ListOf(nodes))
 }
 
 func (h *Storage) GetNode(w http.ResponseWriter, r *http.Request) {

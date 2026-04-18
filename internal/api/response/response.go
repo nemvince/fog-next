@@ -71,3 +71,16 @@ func Decode(w http.ResponseWriter, r *http.Request, dst any) bool {
 	}
 	return true
 }
+
+// ListResponse is the standard envelope for collection endpoints.
+type ListResponse[T any] struct {
+	Data []T `json:"data"`
+}
+
+// ListOf wraps items in a ListResponse, normalising nil slices to an empty array.
+func ListOf[T any](items []T) ListResponse[T] {
+	if items == nil {
+		items = make([]T, 0)
+	}
+	return ListResponse[T]{Data: items}
+}

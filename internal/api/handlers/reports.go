@@ -21,7 +21,7 @@ func (h *Reports) ImagingHistory(w http.ResponseWriter, r *http.Request) {
 		response.InternalError(w)
 		return
 	}
-	response.OK(w, logs)
+	response.OK(w, response.ListOf(logs))
 }
 
 // HostInventory returns a paginated list of hosts with their inventory data.
@@ -42,7 +42,7 @@ func (h *Reports) HostInventory(w http.ResponseWriter, r *http.Request) {
 		inv, _ := h.store.Hosts().GetInventory(r.Context(), h2.ID)
 		result = append(result, hostWithInventory{Host: h2, Inventory: inv})
 	}
-	response.OK(w, result)
+	response.OK(w, response.ListOf(result))
 }
 
 // parseLimitParam reads the ?limit= query param, capping at 200.

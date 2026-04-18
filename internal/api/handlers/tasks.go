@@ -32,7 +32,7 @@ func (h *Tasks) List(w http.ResponseWriter, r *http.Request) {
 		response.InternalError(w)
 		return
 	}
-	response.OK(w, tasks)
+	response.OK(w, response.ListOf(tasks))
 }
 
 func (h *Tasks) Get(w http.ResponseWriter, r *http.Request) {

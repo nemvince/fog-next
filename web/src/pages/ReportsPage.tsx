@@ -1,3 +1,4 @@
+import { type ImagingLogEntry, reportsApi } from "@/api/client";
 import { useQuery } from "@tanstack/react-query";
 import {
 	createColumnHelper,
@@ -6,49 +7,40 @@ import {
 	useReactTable,
 } from "@tanstack/react-table";
 import { useState } from "react";
-import { type ImagingLogEntry, reportsApi } from "@/api/client";
-import { Badge } from "@/components/ui/Badge";
 
 const col = createColumnHelper<ImagingLogEntry>();
 
-const stateVariant = (s: string) => {
-	if (s === "complete") return "success";
-	if (s === "failed") return "destructive";
-	if (s === "active") return "warning";
-	return "outline";
-};
+function fmtBytes(b: number) {
+	if (!b) return "—";
+	const gb = b / 1_073_741_824;
+	return gb >= 1 ? `${gb.toFixed(2)} GiB` : `${(b / 1_048_576).toFixed(1)} MiB`;
+}
+
+function fmtDuration(seconds: number) {
+	if (!seconds) return "—";
+	const m = Math.floor(seconds / 60);
+	const s = seconds % 60;
+	return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
 
 const columns = [
-	col.accessor("hostName", { header: "Host" }),
-	col.accessor("imageName", { header: "Image" }),
+	col.accessor("hostId", { header: "Host ID" }),
 	col.accessor("taskType", { header: "Type" }),
-	col.accessor("state", {
-		header: "State",
-		cell: (info) => (
-			<Badge variant={stateVariant(info.getValue())}>{info.getValue()}</Badge>
-		),
+	col.accessor("imageId", {
+		header: "Image ID",
+		cell: (info) => info.getValue() ?? "—",
 	}),
-	col.accessor("startedAt", {
-		header: "Started",
+	col.accessor("sizeBytes", {
+		header: "Size",
+		cell: (info) => fmtBytes(info.getValue()),
+	}),
+	col.accessor("duration", {
+		header: "Duration",
+		cell: (info) => fmtDuration(info.getValue()),
+	}),
+	col.accessor("createdAt", {
+		header: "Date",
 		cell: (info) => new Date(info.getValue()).toLocaleString(),
-	}),
-	col.accessor("finishedAt", {
-		header: "Finished",
-		cell: (info) => {
-			const v = info.getValue();
-			return v ? new Date(v).toLocaleString() : "—";
-		},
-	}),
-	col.accessor("bytesTransferred", {
-		header: "Transferred",
-		cell: (info) => {
-			const b = info.getValue();
-			if (!b) return "—";
-			const gb = b / 1073741824;
-			return gb >= 1
-				? `${gb.toFixed(2)} GiB`
-				: `${(b / 1048576).toFixed(1)} MiB`;
-		},
 	}),
 ];
 
@@ -76,24 +68,15 @@ export function ReportsPage() {
 	});
 
 	function exportCSV(rows: ImagingLogEntry[]) {
-		const headers = [
-			"Host",
-			"Image",
-			"Type",
-			"State",
-			"Started",
-			"Finished",
-			"Bytes",
-		];
+		const headers = ["Host ID", "Type", "Image ID", "Size (bytes)", "Duration (s)", "Date"];
 		const lines = rows.map((r) =>
 			[
-				r.hostName,
-				r.imageName,
+				r.hostId,
 				r.taskType,
-				r.state,
-				r.startedAt,
-				r.finishedAt ?? "",
-				r.bytesTransferred,
+				r.imageId ?? "",
+				r.sizeBytes,
+				r.duration,
+				r.createdAt,
 			]
 				.map((v) => `"${String(v).replace(/"/g, '""')}"`)
 				.join(","),

@@ -19,7 +19,7 @@ func (h *Settings) List(w http.ResponseWriter, r *http.Request) {
 		response.InternalError(w)
 		return
 	}
-	response.OK(w, settings)
+	response.OK(w, response.ListOf(settings))
 }
 
 func (h *Settings) Set(w http.ResponseWriter, r *http.Request) {

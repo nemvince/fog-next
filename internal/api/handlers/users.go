@@ -26,7 +26,7 @@ func (h *Users) List(w http.ResponseWriter, r *http.Request) {
 		response.InternalError(w)
 		return
 	}
-	response.OK(w, users)
+	response.OK(w, response.ListOf(users))
 }
 
 func (h *Users) Get(w http.ResponseWriter, r *http.Request) {
