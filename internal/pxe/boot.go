@@ -89,6 +89,9 @@ func buildKernelArgs(p BootParams, extraArgs string) string {
 		// tty0 = VGA, ttyS0 = serial (both are no-ops if the hw isn't present).
 		"console=tty0",
 		"console=ttyS0,115200",
+		// earlyprintk captures output before the full console subsystem is up,
+		// including early panics (e.g. initramfs decompression failures).
+		"earlyprintk=vga,keep",
 		fmt.Sprintf("fog_server=%s", p.ServerURL),
 	}
 	if p.Host != nil {
