@@ -1,3 +1,12 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+	createColumnHelper,
+	getCoreRowModel,
+	getSortedRowModel,
+	useReactTable,
+} from "@tanstack/react-table";
+import { Plus, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
 import { type Image, imagesApi } from "@/api/client";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -10,15 +19,6 @@ import {
 } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
 import { toast } from "@/components/ui/Toast";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-	createColumnHelper,
-	getCoreRowModel,
-	getSortedRowModel,
-	useReactTable,
-} from "@tanstack/react-table";
-import { Plus, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
 
 const col = createColumnHelper<Image>();
 
@@ -169,7 +169,10 @@ export function ImagesPage() {
 							required
 						/>
 						<div className="flex flex-col gap-1">
-							<label className="text-xs text-gray-400" htmlFor="partitions-textarea">
+							<label
+								className="text-xs text-gray-400"
+								htmlFor="partitions-textarea"
+							>
 								Partitions (JSON, optional)
 							</label>
 							<textarea

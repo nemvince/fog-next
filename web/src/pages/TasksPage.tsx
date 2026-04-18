@@ -1,3 +1,11 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+	createColumnHelper,
+	getCoreRowModel,
+	useReactTable,
+} from "@tanstack/react-table";
+import { Plus, XCircle } from "lucide-react";
+import { useMemo, useState } from "react";
 import {
 	type Host,
 	hostsApi,
@@ -17,14 +25,6 @@ import {
 } from "@/components/ui/Dialog";
 import { toast } from "@/components/ui/Toast";
 import { useServerEvents } from "@/hooks/useServerEvents";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-	createColumnHelper,
-	getCoreRowModel,
-	useReactTable,
-} from "@tanstack/react-table";
-import { Plus, XCircle } from "lucide-react";
-import { useMemo, useState } from "react";
 
 const TASK_TYPES = [
 	{ value: "deploy", label: "Deploy" },
@@ -259,7 +259,10 @@ export function TasksPage() {
 						className="flex flex-col gap-4"
 					>
 						<div className="flex flex-col gap-1">
-							<label className="text-xs text-gray-400" htmlFor="task-type-select">
+							<label
+								className="text-xs text-gray-400"
+								htmlFor="task-type-select"
+							>
 								Task Type
 							</label>
 							<select
@@ -300,7 +303,7 @@ export function TasksPage() {
 									Image (optional — defaults to host&apos;s assigned image)
 								</label>
 								<select
-								id="image-select"
+									id="image-select"
 									value={imageId}
 									onChange={(e) => setImageId(e.target.value)}
 									className={selectClass}
