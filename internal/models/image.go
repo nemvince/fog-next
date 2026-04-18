@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -21,7 +22,7 @@ type Image struct {
 	ToReplicate    bool       `db:"to_replicate"     json:"toReplicate"`
 	SizeBytes      int64      `db:"size_bytes"       json:"sizeBytes"`
 	// Partitions is a JSONB field capturing partition layout from last capture.
-	Partitions     []byte     `db:"partitions"       json:"partitions,omitempty"`
+	Partitions     json.RawMessage `db:"partitions"       json:"partitions,omitempty"`
 	CreatedAt      time.Time  `db:"created_at"       json:"createdAt"`
 	CreatedBy      string     `db:"created_by"       json:"createdBy"`
 	UpdatedAt      time.Time  `db:"updated_at"       json:"updatedAt"`

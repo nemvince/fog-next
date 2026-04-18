@@ -39,6 +39,9 @@ func (s *imageStore) CreateImage(ctx context.Context, img *models.Image) error {
 	if img.ID == uuid.Nil {
 		img.ID = uuid.New()
 	}
+	if len(img.Partitions) == 0 {
+		img.Partitions = nil
+	}
 	_, err := s.db.NamedExecContext(ctx, `
 		INSERT INTO images (id, name, description, path, os_type_id, image_type_id,
 		                    storage_group_id, is_enabled, to_replicate, size_bytes,
@@ -50,6 +53,9 @@ func (s *imageStore) CreateImage(ctx context.Context, img *models.Image) error {
 }
 
 func (s *imageStore) UpdateImage(ctx context.Context, img *models.Image) error {
+	if len(img.Partitions) == 0 {
+		img.Partitions = nil
+	}
 	_, err := s.db.NamedExecContext(ctx, `
 		UPDATE images SET
 		  name = :name, description = :description, path = :path,
