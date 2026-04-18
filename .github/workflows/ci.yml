@@ -62,7 +62,7 @@ jobs:
 
   # ─── React frontend ───────────────────────────────────────────────────────
   frontend:
-    name: Frontend build & type-check
+    name: Frontend lint, build & type-check
     runs-on: ubuntu-latest
 
     steps:
@@ -76,6 +76,10 @@ jobs:
       - name: Install dependencies
         working-directory: web
         run: bun install --frozen-lockfile
+
+      - name: Lint
+        working-directory: web
+        run: bun run lint
 
       - name: Type-check & build
         working-directory: web

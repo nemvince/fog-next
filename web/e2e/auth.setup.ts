@@ -9,25 +9,26 @@
  * so they are never hard-coded.  Defaults fall back to the dev-mode admin
  * account created by `fog install`.
  */
-import { expect, test as setup } from '@playwright/test';
-import path from 'path';
 
-const AUTH_FILE = path.join(import.meta.dirname, '.auth', 'user.json');
+import path from "node:path";
+import { expect, test as setup } from "@playwright/test";
 
-const USERNAME = process.env.FOG_E2E_USER ?? 'fog';
-const PASSWORD = process.env.FOG_E2E_PASS ?? 'password';
+const AUTH_FILE = path.join(import.meta.dirname, ".auth", "user.json");
 
-setup('authenticate', async ({ page }) => {
-  await page.goto('/login');
+const USERNAME = process.env.FOG_E2E_USER ?? "fog";
+const PASSWORD = process.env.FOG_E2E_PASS ?? "password";
 
-  await page.getByLabel(/username/i).fill(USERNAME);
-  await page.getByLabel(/password/i).fill(PASSWORD);
-  await page.getByRole('button', { name: /sign in|log in/i }).click();
+setup("authenticate", async ({ page }) => {
+	await page.goto("/login");
 
-  // Wait until the dashboard is visible — confirming a successful login.
-  await expect(page).toHaveURL(/\/(dashboard|hosts|$)/);
-  await expect(page.getByRole('navigation')).toBeVisible();
+	await page.getByLabel(/username/i).fill(USERNAME);
+	await page.getByLabel(/password/i).fill(PASSWORD);
+	await page.getByRole("button", { name: /sign in|log in/i }).click();
 
-  // Persist authentication state for reuse across test projects.
-  await page.context().storageState({ path: AUTH_FILE });
+	// Wait until the dashboard is visible — confirming a successful login.
+	await expect(page).toHaveURL(/\/(dashboard|hosts|$)/);
+	await expect(page.getByRole("navigation")).toBeVisible();
+
+	// Persist authentication state for reuse across test projects.
+	await page.context().storageState({ path: AUTH_FILE });
 });
