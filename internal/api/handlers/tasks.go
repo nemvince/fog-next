@@ -66,6 +66,48 @@ func (h *Tasks) Create(w http.ResponseWriter, r *http.Request) {
 		response.BadRequest(w, "type is required")
 		return
 	}
+
+	// For imaging tasks, resolve image and storage from the host when not
+	// explicitly provided by the caller.
+	needsImage := task.Type == models.TaskTypeDeploy ||
+		task.Type == models.TaskTypeCapture ||
+		task.Type == models.TaskTypeMulticast ||
+		task.Type == models.TaskTypeDebugDeploy ||
+		task.Type == models.TaskTypeDebugCapture
+
+	if needsImage {
+		host, err := h.store.Hosts().GetHost(r.Context(), task.HostID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				response.NotFound(w, "host")
+			} else {
+				response.InternalError(w)
+			}
+			return
+		}
+		// Inherit image from host if not explicitly set.
+		if task.ImageID == nil && host.ImageID != nil {
+			task.ImageID = host.ImageID
+		}
+		if task.ImageID == nil {
+			response.BadRequest(w, "host has no image assigned and no imageId provided")
+			return
+		}
+		// Inherit storage group from the image when not set.
+		if task.StorageGroupID == nil {
+			img, err := h.store.Images().GetImage(r.Context(), *task.ImageID)
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					response.NotFound(w, "image")
+				} else {
+					response.InternalError(w)
+				}
+				return
+			}
+			task.StorageGroupID = img.StorageGroupID
+		}
+	}
+
 	task.State = models.TaskStateQueued
 	if claims != nil {
 		task.CreatedBy = claims.Username

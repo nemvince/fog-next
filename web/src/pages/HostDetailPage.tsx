@@ -1,14 +1,14 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus, Trash2, Wifi, WifiOff } from "lucide-react";
-import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { type Host, hostsApi } from "@/api/client";
+import { type Host, type Task, hostsApi, imagesApi, tasksApi } from "@/api/client";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { toast } from "@/components/ui/Toast";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, Download, HardDrive, Plus, Trash2, Upload, Wifi, WifiOff } from "lucide-react";
+import { useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 
-type Tab = "info" | "macs" | "inventory";
+type Tab = "info" | "macs" | "inventory" | "tasks";
 
 export function HostDetailPage() {
 	const { id } = useParams<{ id: string }>();
@@ -70,6 +70,40 @@ export function HostDetailPage() {
 		onError: (e: Error) => toast(e.message, { variant: "destructive" }),
 	});
 
+	// ── Task management ──────────────────────────────────────────
+	const { data: activeTask, isLoading: taskLoading } = useQuery({
+		queryKey: ["hosts", id, "task"],
+		queryFn: () => hostsApi.getActiveTask(id as string),
+		enabled: !!id && tab === "tasks",
+		refetchInterval: tab === "tasks" ? 5_000 : false,
+	});
+
+	const { data: imagesData } = useQuery({
+		queryKey: ["images"],
+		queryFn: () => imagesApi.list(),
+		enabled: tab === "tasks",
+	});
+
+	const createTaskMutation = useMutation({
+		mutationFn: (payload: Partial<Task>) => tasksApi.create(payload),
+		onSuccess: () => {
+			void qc.invalidateQueries({ queryKey: ["hosts", id, "task"] });
+			void qc.invalidateQueries({ queryKey: ["tasks"] });
+			toast("Task created", { variant: "success" });
+		},
+		onError: (e: Error) => toast(e.message, { variant: "destructive" }),
+	});
+
+	const cancelTaskMutation = useMutation({
+		mutationFn: (taskId: string) => tasksApi.cancel(taskId),
+		onSuccess: () => {
+			void qc.invalidateQueries({ queryKey: ["hosts", id, "task"] });
+			void qc.invalidateQueries({ queryKey: ["tasks"] });
+			toast("Task canceled");
+		},
+		onError: (e: Error) => toast(e.message, { variant: "destructive" }),
+	});
+
 	if (isLoading || !host) {
 		return (
 			<div className="p-8 flex items-center justify-center text-gray-400">
@@ -127,7 +161,7 @@ export function HostDetailPage() {
 
 			{/* Tabs */}
 			<div className="mb-6 flex gap-1 border-b border-gray-800">
-				{(["info", "macs", "inventory"] as Tab[]).map((t) => (
+				{(["info", "macs", "inventory", "tasks"] as Tab[]).map((t) => (
 					<button
 						type="button"
 						key={t}
@@ -141,7 +175,9 @@ export function HostDetailPage() {
 					>
 						{t === "macs"
 							? "MAC Addresses"
-							: t.charAt(0).toUpperCase() + t.slice(1)}
+							: t === "tasks"
+								? "Tasks"
+								: t.charAt(0).toUpperCase() + t.slice(1)}
 					</button>
 				))}
 			</div>
@@ -298,6 +334,124 @@ export function HostDetailPage() {
 							</div>
 						))
 					)}
+				</div>
+			)}
+
+			{/* Tasks tab */}
+			{tab === "tasks" && (
+				<div className="flex flex-col gap-6">
+					{/* Active task */}
+					{taskLoading ? (
+						<p className="text-sm text-gray-400">Loading…</p>
+					) : activeTask ? (
+						<div className="rounded-lg border border-gray-800 bg-gray-900 p-4 flex flex-col gap-3">
+							<div className="flex items-center justify-between">
+								<div className="flex items-center gap-2">
+									<HardDrive className="h-4 w-4 text-blue-400" />
+									<span className="text-sm font-medium text-gray-100 capitalize">
+										{activeTask.type.replace("_", " ")} — {activeTask.state}
+									</span>
+								</div>
+								{["active", "queued"].includes(activeTask.state) && (
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => cancelTaskMutation.mutate(activeTask.id)}
+									>
+										Cancel
+									</Button>
+								)}
+							</div>
+							{activeTask.state === "active" && (
+								<div className="flex items-center gap-3">
+									<div className="h-2 flex-1 rounded-full bg-gray-700">
+										<div
+											className="h-2 rounded-full bg-blue-500 transition-all"
+											style={{ width: `${Math.min(activeTask.percentComplete, 100)}%` }}
+										/>
+									</div>
+									<span className="text-xs text-gray-400 w-10 text-right">
+										{activeTask.percentComplete}%
+									</span>
+								</div>
+							)}
+						</div>
+					) : (
+						<p className="text-sm text-gray-500">No active task.</p>
+					)}
+
+					{/* Quick actions */}
+					<div>
+						<h3 className="text-sm font-medium text-gray-400 mb-3">Quick Actions</h3>
+						<div className="flex flex-wrap gap-2">
+							<Button
+								onClick={() =>
+									createTaskMutation.mutate({ hostId: id as string, type: "deploy" })
+								}
+								disabled={!!activeTask || createTaskMutation.isPending}
+							>
+								<Download className="h-4 w-4" /> Deploy
+							</Button>
+							<Button
+								variant="outline"
+								onClick={() =>
+									createTaskMutation.mutate({ hostId: id as string, type: "capture" })
+								}
+								disabled={!!activeTask || createTaskMutation.isPending}
+							>
+								<Upload className="h-4 w-4" /> Capture
+							</Button>
+							<Button
+								variant="outline"
+								onClick={() =>
+									createTaskMutation.mutate({ hostId: id as string, type: "debug_deploy" })
+								}
+								disabled={!!activeTask || createTaskMutation.isPending}
+							>
+								Debug
+							</Button>
+							<Button
+								variant="outline"
+								onClick={() =>
+									createTaskMutation.mutate({ hostId: id as string, type: "memtest" })
+								}
+								disabled={!!activeTask || createTaskMutation.isPending}
+							>
+								Memtest
+							</Button>
+						</div>
+					</div>
+
+					{/* Image assignment */}
+					<div>
+						<h3 className="text-sm font-medium text-gray-400 mb-3">Assigned Image</h3>
+						<select
+							value={form.imageId ?? host.imageId ?? ""}
+							onChange={(e) =>
+								setForm((f) => ({
+									...f,
+									imageId: e.target.value || undefined,
+								}))
+							}
+							className="rounded-md border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 w-full max-w-sm"
+						>
+							<option value="">No image assigned</option>
+							{(imagesData?.data ?? []).map((img) => (
+								<option key={img.id} value={img.id}>{img.name}</option>
+							))}
+						</select>
+						{form.imageId !== undefined && form.imageId !== host.imageId && (
+							<div className="mt-2">
+								<Button
+									size="sm"
+									onClick={() => updateMutation.mutate()}
+									disabled={updateMutation.isPending}
+								>
+									Save Image Assignment
+								</Button>
+							</div>
+						)}
+					</div>
 				</div>
 			)}
 		</div>
