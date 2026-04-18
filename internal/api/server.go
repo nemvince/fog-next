@@ -19,7 +19,7 @@ import (
 	"github.com/nemvince/fog-next/internal/ws"
 )
 
-//go:embed static
+//go:embed all:static
 var embeddedStatic embed.FS
 
 // Server is the HTTP server for the FOG API and web UI.
