@@ -1,37 +1,37 @@
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-    Dialog,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
 } from "@/components/ui/dialog";
 import {
-    Field,
-    FieldError,
-    FieldGroup,
-    FieldLabel,
+	Field,
+	FieldError,
+	FieldGroup,
+	FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
 } from "@/components/ui/table";
 import { api } from "@/lib/api";
 import type { Paginated, Snapin } from "@/types";
@@ -39,7 +39,6 @@ import { Pencil, Plus, Trash, Upload } from "@phosphor-icons/react";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { zodValidator } from "@tanstack/zod-form-adapter";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import * as z from "zod";
@@ -50,9 +49,9 @@ export const Route = createFileRoute("/_auth/snapins")({
 
 const snapinSchema = z.object({
 	name: z.string().min(1, "Name is required"),
-	description: z.string().optional(),
-	runOrder: z.number().int().min(0).default(0),
-	timeout: z.number().int().min(0).default(300),
+	description: z.string(),
+	runOrder: z.number().int().min(0),
+	timeout: z.number().int().min(0),
 });
 
 function SnapinsPage() {
@@ -113,7 +112,6 @@ function SnapinsPage() {
 
 	const form = useForm({
 		defaultValues: { name: "", description: "", runOrder: 0, timeout: 300 },
-		validatorAdapter: zodValidator(),
 		validators: { onSubmit: snapinSchema },
 		onSubmit: ({ value }) => createMutation.mutate(value),
 	});
@@ -125,7 +123,6 @@ function SnapinsPage() {
 			runOrder: editTarget?.runOrder ?? 0,
 			timeout: editTarget?.timeout ?? 300,
 		},
-		validatorAdapter: zodValidator(),
 		validators: { onSubmit: snapinSchema },
 		onSubmit: ({ value }) => {
 			if (editTarget) updateMutation.mutate({ id: editTarget.id, values: value });
@@ -275,11 +272,11 @@ function SnapinsPage() {
 												<Pencil />
 											</Button>
 											<AlertDialog>
-												<AlertDialogTrigger asChild>
+												<AlertDialogTrigger render={
 													<Button variant="ghost" size="icon-xs">
 														<Trash />
 													</Button>
-												</AlertDialogTrigger>
+												} />
 												<AlertDialogContent>
 													<AlertDialogHeader>
 														<AlertDialogTitle>Delete snapin?</AlertDialogTitle>

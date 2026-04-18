@@ -1,48 +1,48 @@
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
 } from "@/components/ui/card";
 import {
-    Dialog,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
 } from "@/components/ui/dialog";
 import {
-    Field,
-    FieldContent,
-    FieldError,
-    FieldGroup,
-    FieldLabel,
+	Field,
+	FieldContent,
+	FieldError,
+	FieldGroup,
+	FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/lib/api";
@@ -51,7 +51,6 @@ import { Plus, Trash } from "@phosphor-icons/react";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { zodValidator } from "@tanstack/zod-form-adapter";
 import { useState } from "react";
 import { toast } from "sonner";
 import * as z from "zod";
@@ -63,10 +62,10 @@ export const Route = createFileRoute("/_auth/hosts/$id")({
 const infoSchema = z.object({
 	name: z.string().min(1, "Required"),
 	ip: z.string().min(1, "Required"),
-	description: z.string().optional(),
-	kernel: z.string().optional(),
-	init: z.string().optional(),
-	kernelArgs: z.string().optional(),
+	description: z.string(),
+	kernel: z.string(),
+	init: z.string(),
+	kernelArgs: z.string(),
 	isEnabled: z.boolean(),
 	useAad: z.boolean(),
 	useWol: z.boolean(),
@@ -74,7 +73,7 @@ const infoSchema = z.object({
 
 const macSchema = z.object({
 	mac: z.string().min(1, "MAC address is required"),
-	description: z.string().optional(),
+	description: z.string(),
 });
 
 function HostDetailPage() {
@@ -147,14 +146,12 @@ function HostDetailPage() {
 			useAad: host?.useAad ?? false,
 			useWol: host?.useWol ?? false,
 		},
-		validatorAdapter: zodValidator(),
 		validators: { onSubmit: infoSchema },
 		onSubmit: ({ value }) => updateMutation.mutate(value),
 	});
 
 	const macForm = useForm({
 		defaultValues: { mac: "", description: "" },
-		validatorAdapter: zodValidator(),
 		validators: { onSubmit: macSchema },
 		onSubmit: ({ value }) => addMacMutation.mutate(value),
 	});
@@ -298,11 +295,11 @@ function HostDetailPage() {
 											</TableCell>
 											<TableCell className="text-right">
 												<AlertDialog>
-													<AlertDialogTrigger asChild>
+													<AlertDialogTrigger render={
 														<Button variant="ghost" size="icon-xs">
 															<Trash />
 														</Button>
-													</AlertDialogTrigger>
+													} />
 													<AlertDialogContent>
 														<AlertDialogHeader>
 															<AlertDialogTitle>Remove MAC address?</AlertDialogTitle>

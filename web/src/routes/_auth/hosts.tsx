@@ -1,26 +1,26 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-    Dialog,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
 } from "@/components/ui/dialog";
 import {
-    Field,
-    FieldError,
-    FieldGroup,
-    FieldLabel,
+	Field,
+	FieldError,
+	FieldGroup,
+	FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
 } from "@/components/ui/table";
 import { api } from "@/lib/api";
 import type { Host, Paginated } from "@/types";
@@ -29,12 +29,11 @@ import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
-    createColumnHelper,
-    flexRender,
-    getCoreRowModel,
-    useReactTable,
+	createColumnHelper,
+	flexRender,
+	getCoreRowModel,
+	useReactTable,
 } from "@tanstack/react-table";
-import { zodValidator } from "@tanstack/zod-form-adapter";
 import { useState } from "react";
 import { toast } from "sonner";
 import * as z from "zod";
@@ -69,7 +68,7 @@ const columns = [
 const createSchema = z.object({
 	name: z.string().min(1, "Name is required"),
 	ip: z.string().min(1, "IP address is required"),
-	description: z.string().optional(),
+	description: z.string(),
 });
 
 function HostsPage() {
@@ -96,7 +95,6 @@ function HostsPage() {
 
 	const form = useForm({
 		defaultValues: { name: "", ip: "", description: "" },
-		validatorAdapter: zodValidator(),
 		validators: { onSubmit: createSchema },
 		onSubmit: ({ value }) => createMutation.mutate(value),
 	});
@@ -155,7 +153,7 @@ function HostsPage() {
 								>
 									{row.getVisibleCells().map((cell) => (
 										<TableCell key={cell.id}>
-											{flexRender(cell.column.columnDef.renderCell ?? cell.column.columnDef.cell, cell.getContext())}
+											{flexRender(cell.column.columnDef.cell, cell.getContext())}
 										</TableCell>
 									))}
 								</TableRow>

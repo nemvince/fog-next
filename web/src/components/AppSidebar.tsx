@@ -1,30 +1,30 @@
 import {
-    Sidebar,
-    SidebarContent,
-    SidebarFooter,
-    SidebarGroup,
-    SidebarGroupContent,
-    SidebarGroupLabel,
-    SidebarHeader,
-    SidebarMenu,
-    SidebarMenuButton,
-    SidebarMenuItem,
-    SidebarSeparator,
+	Sidebar,
+	SidebarContent,
+	SidebarFooter,
+	SidebarGroup,
+	SidebarGroupContent,
+	SidebarGroupLabel,
+	SidebarHeader,
+	SidebarMenu,
+	SidebarMenuButton,
+	SidebarMenuItem,
+	SidebarSeparator,
 } from "@/components/ui/sidebar";
 import { useAuthStore } from "@/store/auth";
 import {
-    ChartBar,
-    Cpu,
-    FolderOpen,
-    Gauge,
-    Gear,
-    HardDrive,
-    HouseSimple,
-    Package,
-    SignOut,
-    Sliders,
-    Users,
-    WifiMedium,
+	ChartBar,
+	Cpu,
+	FolderOpen,
+	Gauge,
+	Gear,
+	HardDrive,
+	HouseSimple,
+	Package,
+	SignOut,
+	Sliders,
+	Users,
+	WifiMedium,
 } from "@phosphor-icons/react";
 import { Link, useRouter } from "@tanstack/react-router";
 
@@ -73,7 +73,7 @@ export function AppSidebar() {
 						<SidebarMenu>
 							{navItems.map(({ to, label, icon: Icon }) => (
 								<SidebarMenuItem key={to}>
-									<SidebarMenuButton asChild>
+									<SidebarMenuButton render={
 										<Link
 											to={to}
 											activeProps={{ className: "bg-sidebar-accent text-sidebar-accent-foreground" }}
@@ -81,7 +81,7 @@ export function AppSidebar() {
 											<Icon />
 											<span>{label}</span>
 										</Link>
-									</SidebarMenuButton>
+									} />
 								</SidebarMenuItem>
 							))}
 						</SidebarMenu>
@@ -96,7 +96,7 @@ export function AppSidebar() {
 						<SidebarMenu>
 							{adminItems.map(({ to, label, icon: Icon }) => (
 								<SidebarMenuItem key={to}>
-									<SidebarMenuButton asChild>
+									<SidebarMenuButton render={
 										<Link
 											to={to}
 											activeProps={{ className: "bg-sidebar-accent text-sidebar-accent-foreground" }}
@@ -104,7 +104,7 @@ export function AppSidebar() {
 											<Icon />
 											<span>{label}</span>
 										</Link>
-									</SidebarMenuButton>
+									} />
 								</SidebarMenuItem>
 							))}
 						</SidebarMenu>
@@ -118,7 +118,7 @@ export function AppSidebar() {
 						<SidebarMenu>
 							{reportItems.map(({ to, label, icon: Icon }) => (
 								<SidebarMenuItem key={to}>
-									<SidebarMenuButton asChild>
+									<SidebarMenuButton render={
 										<Link
 											to={to}
 											activeProps={{ className: "bg-sidebar-accent text-sidebar-accent-foreground" }}
@@ -126,7 +126,7 @@ export function AppSidebar() {
 											<Icon />
 											<span>{label}</span>
 										</Link>
-									</SidebarMenuButton>
+									} />
 								</SidebarMenuItem>
 							))}
 						</SidebarMenu>

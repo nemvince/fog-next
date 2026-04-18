@@ -1,44 +1,44 @@
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
 } from "@/components/ui/card";
 import {
-    Dialog,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
 } from "@/components/ui/dialog";
 import {
-    Field,
-    FieldError,
-    FieldGroup,
-    FieldLabel,
+	Field,
+	FieldError,
+	FieldGroup,
+	FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
 } from "@/components/ui/table";
 import { api } from "@/lib/api";
 import type { StorageGroup, StorageNode } from "@/types";
@@ -46,7 +46,6 @@ import { Pencil, Plus, Trash } from "@phosphor-icons/react";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { zodValidator } from "@tanstack/zod-form-adapter";
 import { useState } from "react";
 import { toast } from "sonner";
 import * as z from "zod";
@@ -57,16 +56,16 @@ export const Route = createFileRoute("/_auth/storage")({
 
 const groupSchema = z.object({
 	name: z.string().min(1, "Required"),
-	description: z.string().optional(),
+	description: z.string(),
 });
 
 const nodeSchema = z.object({
 	name: z.string().min(1, "Required"),
-	description: z.string().optional(),
+	description: z.string(),
 	ip: z.string().min(1, "Required"),
 	path: z.string().min(1, "Required"),
-	maxClients: z.number().int().min(1).default(10),
-	bandwidthMbps: z.number().int().min(0).default(0),
+	maxClients: z.number().int().min(1),
+	bandwidthMbps: z.number().int().min(0),
 });
 
 function StoragePage() {
@@ -140,14 +139,12 @@ function StoragePage() {
 
 	const groupForm = useForm({
 		defaultValues: { name: "", description: "" },
-		validatorAdapter: zodValidator(),
 		validators: { onSubmit: groupSchema },
 		onSubmit: ({ value }) => createGroupMutation.mutate(value),
 	});
 
 	const nodeForm = useForm({
 		defaultValues: { name: "", description: "", ip: "", path: "", maxClients: 10, bandwidthMbps: 0 },
-		validatorAdapter: zodValidator(),
 		validators: { onSubmit: nodeSchema },
 		onSubmit: ({ value }) => createNodeMutation.mutate(value),
 	});
@@ -161,7 +158,6 @@ function StoragePage() {
 			maxClients: editNode?.maxClients ?? 10,
 			bandwidthMbps: editNode?.bandwidthMbps ?? 0,
 		},
-		validatorAdapter: zodValidator(),
 		validators: { onSubmit: nodeSchema },
 		onSubmit: ({ value }) => {
 			if (editNode) updateNodeMutation.mutate({ id: editNode.id, values: value });
@@ -256,11 +252,11 @@ function StoragePage() {
 											</TableCell>
 											<TableCell className="text-right">
 												<AlertDialog>
-													<AlertDialogTrigger asChild>
+													<AlertDialogTrigger render={
 														<Button variant="ghost" size="icon-xs" onClick={(e) => e.stopPropagation()}>
 															<Trash />
 														</Button>
-													</AlertDialogTrigger>
+													} />
 													<AlertDialogContent>
 														<AlertDialogHeader>
 															<AlertDialogTitle>Delete group?</AlertDialogTitle>
@@ -338,11 +334,11 @@ function StoragePage() {
 														<Pencil />
 													</Button>
 													<AlertDialog>
-														<AlertDialogTrigger asChild>
+														<AlertDialogTrigger render={
 															<Button variant="ghost" size="icon-xs">
 																<Trash />
 															</Button>
-														</AlertDialogTrigger>
+														} />
 														<AlertDialogContent>
 															<AlertDialogHeader>
 																<AlertDialogTitle>Remove node?</AlertDialogTitle>

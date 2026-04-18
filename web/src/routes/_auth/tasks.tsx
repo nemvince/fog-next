@@ -1,45 +1,45 @@
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-    Dialog,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
 } from "@/components/ui/dialog";
 import {
-    Field,
-    FieldContent,
-    FieldError,
-    FieldGroup,
-    FieldLabel,
+	Field,
+	FieldContent,
+	FieldError,
+	FieldGroup,
+	FieldLabel,
 } from "@/components/ui/field";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useServerEvents } from "@/hooks/useServerEvents";
@@ -50,12 +50,11 @@ import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
-    createColumnHelper,
-    flexRender,
-    getCoreRowModel,
-    useReactTable,
+	createColumnHelper,
+	flexRender,
+	getCoreRowModel,
+	useReactTable,
 } from "@tanstack/react-table";
-import { zodValidator } from "@tanstack/zod-form-adapter";
 import { useState } from "react";
 import { toast } from "sonner";
 import * as z from "zod";
@@ -82,7 +81,7 @@ const IMAGE_TASK_TYPES: TaskType[] = ["deploy", "capture", "debug_deploy", "debu
 const taskSchema = z.object({
 	type: z.enum(TASK_TYPES, { message: "Task type is required" }),
 	hostId: z.string().min(1, "Host is required"),
-	imageId: z.string().optional(),
+	imageId: z.string(),
 	isShutdown: z.boolean(),
 	isForced: z.boolean(),
 });
@@ -162,11 +161,11 @@ function TaskTable({
 							<TableCell className="text-right">
 								{["active", "queued"].includes(row.original.state) && (
 									<AlertDialog>
-										<AlertDialogTrigger asChild>
+										<AlertDialogTrigger render={
 											<Button variant="ghost" size="icon-xs">
 												<X />
 											</Button>
-										</AlertDialogTrigger>
+										} />
 										<AlertDialogContent>
 											<AlertDialogHeader>
 												<AlertDialogTitle>Cancel task?</AlertDialogTitle>
@@ -215,7 +214,8 @@ function TasksPage() {
 	});
 
 	const createMutation = useMutation({
-		mutationFn: (values: z.infer<typeof taskSchema>) => api.post<Task>("/tasks", values),
+		mutationFn: (values: z.infer<typeof taskSchema>) =>
+			api.post<Task>("/tasks", { ...values, imageId: values.imageId || undefined }),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: ["tasks"] });
 			setOpen(false);
@@ -241,15 +241,8 @@ function TasksPage() {
 			isShutdown: false,
 			isForced: false,
 		},
-		validatorAdapter: zodValidator(),
 		validators: { onSubmit: taskSchema },
-		onSubmit: ({ value }) => {
-			const body = {
-				...value,
-				imageId: value.imageId || undefined,
-			};
-			createMutation.mutate(body);
-		},
+		onSubmit: ({ value }) => createMutation.mutate(value),
 	});
 
 	const allTasks = tasksQuery.data?.data ?? [];
@@ -344,7 +337,7 @@ function TasksPage() {
 									return (
 										<Field data-invalid={isInvalid}>
 											<FieldLabel>Host</FieldLabel>
-											<Select value={field.state.value} onValueChange={field.handleChange}>
+											<Select value={field.state.value} onValueChange={(v) => v !== null && field.handleChange(v)}>
 												<SelectTrigger aria-invalid={isInvalid}>
 													<SelectValue placeholder="Select host" />
 												</SelectTrigger>
@@ -367,7 +360,7 @@ function TasksPage() {
 											{(field) => (
 												<Field>
 													<FieldLabel>Image</FieldLabel>
-													<Select value={field.state.value} onValueChange={field.handleChange}>
+													<Select value={field.state.value} onValueChange={(v) => v !== null && field.handleChange(v)}>
 														<SelectTrigger>
 															<SelectValue placeholder="Select image" />
 														</SelectTrigger>

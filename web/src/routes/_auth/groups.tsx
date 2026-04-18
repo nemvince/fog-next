@@ -1,50 +1,50 @@
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
 } from "@/components/ui/card";
 import {
-    Dialog,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
 } from "@/components/ui/dialog";
 import {
-    Field,
-    FieldError,
-    FieldGroup,
-    FieldLabel,
+	Field,
+	FieldError,
+	FieldGroup,
+	FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
 } from "@/components/ui/select";
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
 } from "@/components/ui/table";
 import { api } from "@/lib/api";
 import type { Group, GroupMember, Host, Paginated } from "@/types";
@@ -52,7 +52,6 @@ import { Plus, Trash } from "@phosphor-icons/react";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { zodValidator } from "@tanstack/zod-form-adapter";
 import { useState } from "react";
 import { toast } from "sonner";
 import * as z from "zod";
@@ -63,7 +62,7 @@ export const Route = createFileRoute("/_auth/groups")({
 
 const groupSchema = z.object({
 	name: z.string().min(1, "Name is required"),
-	description: z.string().optional(),
+	description: z.string(),
 });
 
 function GroupsPage() {
@@ -71,7 +70,7 @@ function GroupsPage() {
 	const [createOpen, setCreateOpen] = useState(false);
 	const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
 	const [addMemberOpen, setAddMemberOpen] = useState(false);
-	const [addMemberHostId, setAddMemberHostId] = useState("");
+	const [addMemberHostId, setAddMemberHostId] = useState<string | null>("");
 
 	const groupsQuery = useQuery({
 		queryKey: ["groups"],
@@ -132,7 +131,6 @@ function GroupsPage() {
 
 	const form = useForm({
 		defaultValues: { name: "", description: "" },
-		validatorAdapter: zodValidator(),
 		validators: { onSubmit: groupSchema },
 		onSubmit: ({ value }) => createMutation.mutate(value),
 	});
@@ -185,7 +183,7 @@ function GroupsPage() {
 											</TableCell>
 											<TableCell className="text-right">
 												<AlertDialog>
-													<AlertDialogTrigger asChild>
+													<AlertDialogTrigger render={
 														<Button
 															variant="ghost"
 															size="icon-xs"
@@ -193,7 +191,7 @@ function GroupsPage() {
 														>
 															<Trash />
 														</Button>
-													</AlertDialogTrigger>
+													} />
 													<AlertDialogContent>
 														<AlertDialogHeader>
 															<AlertDialogTitle>Delete group?</AlertDialogTitle>
@@ -362,7 +360,7 @@ function GroupsPage() {
 						</Button>
 						<Button
 							disabled={!addMemberHostId || addMemberMutation.isPending}
-							onClick={() => addMemberMutation.mutate(addMemberHostId)}
+							onClick={() => addMemberHostId && addMemberMutation.mutate(addMemberHostId)}
 						>
 							{addMemberMutation.isPending ? "Adding…" : "Add"}
 						</Button>

@@ -1,38 +1,38 @@
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-    Dialog,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
 } from "@/components/ui/dialog";
 import {
-    Field,
-    FieldDescription,
-    FieldError,
-    FieldGroup,
-    FieldLabel,
+	Field,
+	FieldDescription,
+	FieldError,
+	FieldGroup,
+	FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
@@ -42,12 +42,11 @@ import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
-    createColumnHelper,
-    flexRender,
-    getCoreRowModel,
-    useReactTable,
+	createColumnHelper,
+	flexRender,
+	getCoreRowModel,
+	useReactTable,
 } from "@tanstack/react-table";
-import { zodValidator } from "@tanstack/zod-form-adapter";
 import { useState } from "react";
 import { toast } from "sonner";
 import * as z from "zod";
@@ -79,20 +78,17 @@ const columns = [
 
 const imageSchema = z.object({
 	name: z.string().min(1, "Name is required"),
-	description: z.string().optional(),
+	description: z.string(),
 	path: z.string().min(1, "Path is required"),
-	partitions: z
-		.string()
-		.optional()
-		.refine((v) => {
-			if (!v || v.trim() === "") return true;
-			try {
-				JSON.parse(v);
-				return true;
-			} catch {
-				return false;
-			}
-		}, "Must be valid JSON"),
+	partitions: z.string().refine((v) => {
+		if (!v || v.trim() === "") return true;
+		try {
+			JSON.parse(v);
+			return true;
+		} catch {
+			return false;
+		}
+	}, "Must be valid JSON"),
 });
 
 function ImagesPage() {
@@ -149,7 +145,6 @@ function ImagesPage() {
 
 	const form = useForm({
 		defaultValues: { name: "", description: "", path: "", partitions: "" },
-		validatorAdapter: zodValidator(),
 		validators: { onSubmit: imageSchema },
 		onSubmit: ({ value }) => createMutation.mutate(value),
 	});
@@ -161,7 +156,6 @@ function ImagesPage() {
 			path: editTarget?.path ?? "",
 			partitions: editTarget?.partitions ? JSON.stringify(editTarget.partitions, null, 2) : "",
 		},
-		validatorAdapter: zodValidator(),
 		validators: { onSubmit: imageSchema },
 		onSubmit: ({ value }) => {
 			if (editTarget) updateMutation.mutate({ id: editTarget.id, values: value });
@@ -311,11 +305,11 @@ function ImagesPage() {
 												<Pencil />
 											</Button>
 											<AlertDialog>
-												<AlertDialogTrigger asChild>
+												<AlertDialogTrigger render={
 													<Button variant="ghost" size="icon-xs">
 														<Trash />
 													</Button>
-												</AlertDialogTrigger>
+												} />
 												<AlertDialogContent>
 													<AlertDialogHeader>
 														<AlertDialogTitle>Delete image?</AlertDialogTitle>

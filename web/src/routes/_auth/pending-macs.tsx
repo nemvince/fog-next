@@ -1,37 +1,37 @@
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
-    Dialog,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
 } from "@/components/ui/dialog";
 import { Field, FieldLabel } from "@/components/ui/field";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
 } from "@/components/ui/select";
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
 } from "@/components/ui/table";
 import { api } from "@/lib/api";
 import type { Host, Paginated, PendingMAC } from "@/types";
@@ -141,12 +141,12 @@ function PendingMacsPage() {
 												Approve
 											</Button>
 											<AlertDialog>
-												<AlertDialogTrigger asChild>
+												<AlertDialogTrigger render={
 													<Button variant="ghost" size="sm">
 														<X data-icon="inline-start" />
 														Ignore
 													</Button>
-												</AlertDialogTrigger>
+												} />
 												<AlertDialogContent>
 													<AlertDialogHeader>
 														<AlertDialogTitle>Ignore MAC address?</AlertDialogTitle>
@@ -182,7 +182,7 @@ function PendingMacsPage() {
 					</p>
 					<Field>
 						<FieldLabel>Host</FieldLabel>
-						<Select value={approveHostId} onValueChange={setApproveHostId}>
+						<Select value={approveHostId} onValueChange={(v) => v !== null && setApproveHostId(v)}>
 							<SelectTrigger>
 								<SelectValue placeholder="Select host" />
 							</SelectTrigger>

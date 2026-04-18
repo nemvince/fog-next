@@ -1,17 +1,17 @@
 import { Button } from "@/components/ui/button";
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
 } from "@/components/ui/card";
 import {
-    Field,
-    FieldDescription,
-    FieldError,
-    FieldGroup,
-    FieldLabel,
+	Field,
+	FieldDescription,
+	FieldError,
+	FieldGroup,
+	FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
@@ -19,7 +19,6 @@ import { useAuthStore } from "@/store/auth";
 import type { TokenPair } from "@/types";
 import { useForm } from "@tanstack/react-form";
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
-import { zodValidator } from "@tanstack/zod-form-adapter";
 import { toast } from "sonner";
 import * as z from "zod";
 
@@ -43,7 +42,6 @@ function LoginPage() {
 
 	const form = useForm({
 		defaultValues: { username: "", password: "" },
-		validatorAdapter: zodValidator(),
 		validators: { onSubmit: loginSchema },
 		onSubmit: async ({ value }) => {
 			try {

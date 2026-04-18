@@ -1,39 +1,39 @@
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-    Dialog,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
 } from "@/components/ui/dialog";
 import {
-    Field,
-    FieldError,
-    FieldGroup,
-    FieldLabel,
+	Field,
+	FieldError,
+	FieldGroup,
+	FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
 } from "@/components/ui/table";
 import { api } from "@/lib/api";
 import type { Paginated, User } from "@/types";
@@ -41,7 +41,6 @@ import { Copy, Pencil, Plus, Trash } from "@phosphor-icons/react";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { zodValidator } from "@tanstack/zod-form-adapter";
 import { useState } from "react";
 import { toast } from "sonner";
 import * as z from "zod";
@@ -58,7 +57,7 @@ const createSchema = z.object({
 
 const editSchema = z.object({
 	username: z.string().min(1, "Username is required"),
-	password: z.string().optional(),
+	password: z.string(),
 	role: z.enum(["admin", "readonly"]),
 });
 
@@ -117,7 +116,6 @@ function UsersPage() {
 
 	const createForm = useForm({
 		defaultValues: { username: "", password: "", role: "readonly" as "admin" | "readonly" },
-		validatorAdapter: zodValidator(),
 		validators: { onSubmit: createSchema },
 		onSubmit: ({ value }) => createMutation.mutate(value),
 	});
@@ -128,7 +126,6 @@ function UsersPage() {
 			password: "",
 			role: (editTarget?.role ?? "readonly") as "admin" | "readonly",
 		},
-		validatorAdapter: zodValidator(),
 		validators: { onSubmit: editSchema },
 		onSubmit: ({ value }) => {
 			if (editTarget) updateMutation.mutate({ id: editTarget.id, values: value });
@@ -269,11 +266,11 @@ function UsersPage() {
 												<Pencil />
 											</Button>
 											<AlertDialog>
-												<AlertDialogTrigger asChild>
+												<AlertDialogTrigger render={
 													<Button variant="ghost" size="icon-xs">
 														<Trash />
 													</Button>
-												</AlertDialogTrigger>
+												} />
 												<AlertDialogContent>
 													<AlertDialogHeader>
 														<AlertDialogTitle>Delete user?</AlertDialogTitle>
@@ -337,7 +334,7 @@ function UsersPage() {
 							void editForm.handleSubmit();
 						}}
 					>
-						<UserFormFields formInstance={editForm as typeof createForm} isCreate={false} />
+						<UserFormFields formInstance={editForm as unknown as typeof createForm} isCreate={false} />
 						<DialogFooter className="mt-4">
 							<Button type="button" variant="outline" onClick={() => setEditTarget(null)}>Cancel</Button>
 							<editForm.Subscribe selector={(s) => s.isSubmitting}>
