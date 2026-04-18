@@ -25,7 +25,8 @@ const col = createColumnHelper<Image>();
 export function ImagesPage() {
 	const qc = useQueryClient();
 	const [open, setOpen] = useState(false);
-	const [form, setForm] = useState({ name: "", description: "", path: "" });
+	const [form, setForm] = useState({ name: "", description: "", path: "", partitions: "" });
+	const [partitionsError, setPartitionsError] = useState("");
 
 	const { data, isLoading } = useQuery({
 		queryKey: ["images"],
@@ -33,11 +34,12 @@ export function ImagesPage() {
 	});
 
 	const createMutation = useMutation({
-		mutationFn: () => imagesApi.create(form),
+		mutationFn: (payload: Partial<Image>) => imagesApi.create(payload),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: ["images"] });
 			setOpen(false);
-			setForm({ name: "", description: "", path: "" });
+			setForm({ name: "", description: "", path: "", partitions: "" });
+			setPartitionsError("");
 			toast("Image created", { variant: "success" });
 		},
 		onError: (e: Error) => toast(e.message, { variant: "destructive" }),
@@ -121,7 +123,21 @@ export function ImagesPage() {
 					<form
 						onSubmit={(e) => {
 							e.preventDefault();
-							createMutation.mutate();
+							let partitions: unknown = undefined;
+							if (form.partitions.trim()) {
+								try {
+									partitions = JSON.parse(form.partitions) as unknown;
+								} catch {
+									setPartitionsError("Invalid JSON");
+									return;
+								}
+							}
+							createMutation.mutate({
+								name: form.name,
+								description: form.description,
+								path: form.path,
+								...(partitions !== undefined && { partitions }),
+							});
 						}}
 						className="flex flex-col gap-4"
 					>
@@ -144,6 +160,17 @@ export function ImagesPage() {
 							onChange={(e) => setForm({ ...form, path: e.target.value })}
 							required
 						/>
+						<div className="flex flex-col gap-1">
+							<label className="text-xs text-gray-400">Partitions (JSON, optional)</label>
+							<textarea
+								value={form.partitions}
+								onChange={(e) => { setPartitionsError(""); setForm({ ...form, partitions: e.target.value }); }}
+								rows={4}
+								placeholder='[ { "type": "ext4", "size": 10240 } ]'
+								className="rounded-md border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 placeholder:text-gray-500 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-y"
+							/>
+							{partitionsError && <p className="text-xs text-red-400">{partitionsError}</p>}
+						</div>
 						<div className="flex justify-end gap-2">
 							<Button
 								type="button"

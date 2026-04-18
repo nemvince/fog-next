@@ -135,6 +135,7 @@ export interface Image {
 	isEnabled: boolean;
 	toReplicate: boolean;
 	sizeBytes: number;
+	partitions?: unknown;
 	createdAt: string;
 	createdBy: string;
 	updatedAt: string;
