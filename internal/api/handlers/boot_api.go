@@ -7,6 +7,8 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -388,8 +390,7 @@ func (h *BootAPI) Download(w http.ResponseWriter, r *http.Request) {
 	// Resolve the storage node to proxy through.
 	nodeURL, resolveErr := h.resolveStorageNodeURL(r, task, img)
 	if resolveErr != nil {
-		slog.Error("image download: no storage node", "image", imageID, "err", resolveErr)
-		response.InternalError(w)
+		h.downloadLocal(w, r, img, partNum)
 		return
 	}
 
@@ -438,8 +439,7 @@ func (h *BootAPI) Upload(w http.ResponseWriter, r *http.Request) {
 
 	nodeURL, resolveErr := h.resolveStorageNodeURL(r, task, img)
 	if resolveErr != nil {
-		slog.Error("image upload: no storage node", "image", imageID, "err", resolveErr)
-		response.InternalError(w)
+		h.uploadLocal(w, r, img, partNum)
 		return
 	}
 
@@ -498,6 +498,45 @@ func (h *BootAPI) proxyPut(w http.ResponseWriter, r *http.Request, upstreamURL s
 	}
 	defer resp.Body.Close()
 	w.WriteHeader(resp.StatusCode)
+}
+
+// downloadLocal serves an image part directly from cfg.Storage.BasePath.
+func (h *BootAPI) downloadLocal(w http.ResponseWriter, r *http.Request, img *models.Image, partNum int) {
+	base := filepath.Clean(h.cfg.Storage.BasePath)
+	rel := filepath.Join(base, filepath.FromSlash(img.Path), partFilename(partNum))
+	if !strings.HasPrefix(rel, base+string(filepath.Separator)) {
+		response.BadRequest(w, "invalid image path")
+		return
+	}
+	http.ServeFile(w, r, rel)
+}
+
+// uploadLocal writes an image part directly to cfg.Storage.BasePath.
+func (h *BootAPI) uploadLocal(w http.ResponseWriter, r *http.Request, img *models.Image, partNum int) {
+	base := filepath.Clean(h.cfg.Storage.BasePath)
+	dir := filepath.Join(base, filepath.FromSlash(img.Path))
+	if !strings.HasPrefix(dir+string(filepath.Separator), base+string(filepath.Separator)) {
+		response.BadRequest(w, "invalid image path")
+		return
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		slog.Error("upload local: mkdir", "dir", dir, "err", err)
+		response.InternalError(w)
+		return
+	}
+	dest := filepath.Join(dir, partFilename(partNum))
+	f, err := os.Create(dest)
+	if err != nil {
+		slog.Error("upload local: create", "path", dest, "err", err)
+		response.InternalError(w)
+		return
+	}
+	defer f.Close()
+	if _, err := io.Copy(f, r.Body); err != nil {
+		slog.Error("upload local: write", "path", dest, "err", err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // resolveStorageNodeURL returns the base URL of the storage node assigned to
