@@ -1,3 +1,5 @@
+import { ensureFreshToken } from "@/lib/api";
+import { useAuthStore } from "@/store/auth";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 
@@ -11,15 +13,21 @@ export function useServerEvents() {
 	const qc = useQueryClient();
 	const wsRef = useRef<WebSocket | null>(null);
 	const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	// Re-run the effect whenever the access token changes (e.g. after a refresh).
+	const accessToken = useAuthStore((s) => s.accessToken);
 
 	useEffect(() => {
 		let stopped = false;
 
 		const proto = window.location.protocol === "https:" ? "wss" : "ws";
-		const url = `${proto}://${window.location.host}/fog/api/v1/ws`;
+		const base = `${proto}://${window.location.host}/fog/api/v1/ws`;
 
 		const connect = () => {
 			if (stopped) return;
+
+			// Read the latest token at connect-time (may have been refreshed).
+			const token = useAuthStore.getState().accessToken;
+			const url = token ? `${base}?token=${encodeURIComponent(token)}` : base;
 
 			const ws = new WebSocket(url);
 			wsRef.current = ws;
@@ -39,11 +47,29 @@ export function useServerEvents() {
 
 			ws.onclose = () => {
 				if (stopped) return;
-				timerRef.current = setTimeout(connect, 3000);
+				// Before reconnecting, ensure we have a fresh token.
+				timerRef.current = setTimeout(() => {
+					void ensureFreshToken()
+						.catch(() => {
+							// If refresh fails (e.g. refresh token expired), the store
+							// will have been logged out — stop reconnecting.
+							stopped = true;
+						})
+						.then(() => {
+							if (!stopped) connect();
+						});
+				}, 3000);
 			};
 		};
 
-		connect();
+		// Ensure a fresh token before the first connection attempt.
+		void ensureFreshToken()
+			.catch(() => {
+				stopped = true;
+			})
+			.then(() => {
+				if (!stopped) connect();
+			});
 
 		return () => {
 			stopped = true;
@@ -54,5 +80,5 @@ export function useServerEvents() {
 			wsRef.current?.close();
 			wsRef.current = null;
 		};
-	}, [qc]);
+	}, [qc, accessToken]);
 }
