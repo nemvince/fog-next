@@ -22,7 +22,10 @@ let _refreshPromise: Promise<void> | null = null;
  * Throws an ApiError(401) and calls logout() when the refresh itself fails.
  */
 export async function ensureFreshToken(): Promise<void> {
+	// If not expired, nothing to do.
 	if (!isTokenExpired()) return;
+	// If there's no refresh token (e.g. not logged in yet), skip silently.
+	if (!useAuthStore.getState().refreshToken) return;
 	if (!_refreshPromise) {
 		_refreshPromise = _doRefresh().finally(() => {
 			_refreshPromise = null;
