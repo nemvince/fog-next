@@ -30,8 +30,10 @@ type ServerConfig struct {
 	TLSCert     string `mapstructure:"tls_cert"`
 	TLSKey      string `mapstructure:"tls_key"`
 	BaseURL     string `mapstructure:"base_url"`
-	ReadTimeout  time.Duration `mapstructure:"read_timeout"`
-	WriteTimeout time.Duration `mapstructure:"write_timeout"`
+	// ReadHeaderTimeout limits only the time to read request headers, protecting
+	// against slowloris attacks. ReadTimeout / WriteTimeout are intentionally not
+	// set so that long-running image upload/download streams are never killed.
+	ReadHeaderTimeout time.Duration `mapstructure:"read_header_timeout"`
 }
 
 type DatabaseConfig struct {
@@ -157,8 +159,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("server.http", ":80")
 	v.SetDefault("server.https", ":443")
 	v.SetDefault("server.base_url", "http://localhost")
-	v.SetDefault("server.read_timeout", 30*time.Second)
-	v.SetDefault("server.write_timeout", 60*time.Second)
+	v.SetDefault("server.read_header_timeout", 10*time.Second)
 
 	v.SetDefault("database.host", "localhost")
 	v.SetDefault("database.port", 5432)

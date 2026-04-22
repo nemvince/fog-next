@@ -6,8 +6,7 @@ server:
   tls_key:  "{{ fog_tls_key }}"
 {% endif %}
   base_url: "{{ fog_base_url | default('http://' + ansible_default_ipv4.address) }}"
-  read_timeout:  "30s"
-  write_timeout: "60s"
+  read_header_timeout: "10s"
 
 database:
   host:     "{{ fog_db_host }}"

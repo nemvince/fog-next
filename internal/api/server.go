@@ -39,10 +39,10 @@ func New(cfg *config.Config, st store.Store) *Server {
 	s := &Server{cfg: cfg, store: st, hub: ws.New(), plugins: plugins.DefaultRegistry}
 	s.router = s.buildRouter()
 	s.http = &http.Server{
-		Addr:         cfg.Server.HTTP,
-		Handler:      s.router,
-		ReadTimeout:  cfg.Server.ReadTimeout,
-		WriteTimeout: cfg.Server.WriteTimeout,
+		Addr:              cfg.Server.HTTP,
+		Handler:           s.router,
+		ReadHeaderTimeout: cfg.Server.ReadHeaderTimeout,
+		// No ReadTimeout or WriteTimeout — image streams can run for many minutes.
 	}
 	return s
 }
@@ -65,10 +65,9 @@ func (s *Server) Start(ctx context.Context) error {
 
 	if s.cfg.Server.TLSCert != "" && s.cfg.Server.TLSKey != "" {
 		s.https = &http.Server{
-			Addr:         s.cfg.Server.HTTPS,
-			Handler:      s.router,
-			ReadTimeout:  s.cfg.Server.ReadTimeout,
-			WriteTimeout: s.cfg.Server.WriteTimeout,
+			Addr:              s.cfg.Server.HTTPS,
+			Handler:           s.router,
+			ReadHeaderTimeout: s.cfg.Server.ReadHeaderTimeout,
 		}
 		go func() {
 			if err := s.https.ListenAndServeTLS(s.cfg.Server.TLSCert, s.cfg.Server.TLSKey); err != nil && err != http.ErrServerClosed {
