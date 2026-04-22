@@ -437,6 +437,12 @@ func (h *BootAPI) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Clear per-connection read/write deadlines so large image uploads are not
+	// killed by the global server ReadTimeout / WriteTimeout.
+	rc := http.NewResponseController(w)
+	_ = rc.SetReadDeadline(time.Time{})
+	_ = rc.SetWriteDeadline(time.Time{})
+
 	nodeURL, resolveErr := h.resolveStorageNodeURL(r, task, img)
 	if resolveErr != nil {
 		h.uploadLocal(w, r, img, partNum)
