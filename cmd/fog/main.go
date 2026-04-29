@@ -2,9 +2,7 @@
 // Usage:
 //
 //	fog serve              -- start the HTTP server + all background services
-//	fog migrate up         -- apply pending migrations
-//	fog migrate down       -- roll back the last migration
-//	fog migrate status     -- print migration version
+//	fog migrate up         -- apply pending schema migrations
 //	fog install            -- interactive first-run setup
 //	fog migrate-legacy     -- migrate data from a legacy FOG 1.x MySQL database
 package main
@@ -19,15 +17,14 @@ import (
 
 	"github.com/spf13/cobra"
 
+	entuser "github.com/nemvince/fog-next/ent/user"
 	"github.com/nemvince/fog-next/internal/api"
 	"github.com/nemvince/fog-next/internal/auth"
 	"github.com/nemvince/fog-next/internal/config"
 	"github.com/nemvince/fog-next/internal/database"
 	"github.com/nemvince/fog-next/internal/fos"
 	"github.com/nemvince/fog-next/internal/legacymigrate"
-	"github.com/nemvince/fog-next/internal/models"
 	"github.com/nemvince/fog-next/internal/services"
-	"github.com/nemvince/fog-next/internal/store/postgres"
 	"github.com/nemvince/fog-next/internal/tftp"
 	"golang.org/x/term"
 )
@@ -71,18 +68,16 @@ func runServe(_ *cobra.Command, _ []string) error {
 	defer cancel()
 
 	// Database
-	db, err := database.Connect(ctx, cfg.Database)
+	client, err := database.Open(ctx, cfg.Database)
 	if err != nil {
 		return fmt.Errorf("database connect: %w", err)
 	}
-	defer db.Close()
+	defer client.Close()
 
-	// Auto-migrate on startup
-	if err := db.MigrateUp(); err != nil {
+	// Auto-migrate schema on startup
+	if err := database.Migrate(ctx, client); err != nil {
 		return fmt.Errorf("migrations: %w", err)
 	}
-
-	st := postgres.New(db)
 
 	// TFTP server
 	tftpSrv := tftp.New(cfg)
@@ -94,18 +89,18 @@ func runServe(_ *cobra.Command, _ []string) error {
 
 	// Background services
 	mgr := services.New(
-		services.NewTaskScheduler(cfg, st),
-		services.NewImageReplicator(cfg, st),
-		services.NewSnapinReplicator(cfg, st),
-		services.NewMulticastManager(cfg, st),
-		services.NewPingHosts(cfg, st),
-		services.NewImageSize(cfg, st),
-		services.NewSnapinHash(cfg, st),
+		services.NewTaskScheduler(cfg, client),
+		services.NewImageReplicator(cfg, client),
+		services.NewSnapinReplicator(cfg, client),
+		services.NewMulticastManager(cfg, client),
+		services.NewPingHosts(cfg, client),
+		services.NewImageSize(cfg, client),
+		services.NewSnapinHash(cfg, client),
 	)
 	go mgr.Run(ctx)
 
 	// HTTP API server
-	srv := api.New(cfg, st)
+	srv := api.New(cfg, client)
 	errCh := make(chan error, 1)
 	go func() {
 		slog.Info("fog server starting",
@@ -133,18 +128,8 @@ func migrateCmd() *cobra.Command {
 	mc.AddCommand(
 		&cobra.Command{
 			Use:   "up",
-			Short: "Apply all pending migrations",
+			Short: "Apply / sync schema (Ent auto-migrate)",
 			RunE:  runMigrateUp,
-		},
-		&cobra.Command{
-			Use:   "down",
-			Short: "Roll back the most recent migration",
-			RunE:  runMigrateDown,
-		},
-		&cobra.Command{
-			Use:   "status",
-			Short: "Print current migration version",
-			RunE:  runMigrateStatus,
 		},
 	)
 	return mc
@@ -152,48 +137,16 @@ func migrateCmd() *cobra.Command {
 
 func runMigrateUp(_ *cobra.Command, _ []string) error {
 	cfg := mustConfig()
-	db, err := database.Connect(context.Background(), cfg.Database)
+	ctx := context.Background()
+	client, err := database.Open(ctx, cfg.Database)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
-	if err := db.MigrateUp(); err != nil {
+	defer client.Close()
+	if err := database.Migrate(ctx, client); err != nil {
 		return err
 	}
-	fmt.Println("migrations applied")
-	return nil
-}
-
-func runMigrateDown(_ *cobra.Command, _ []string) error {
-	cfg := mustConfig()
-	db, err := database.Connect(context.Background(), cfg.Database)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-	if err := db.MigrateDown(); err != nil {
-		return err
-	}
-	fmt.Println("last migration rolled back")
-	return nil
-}
-
-func runMigrateStatus(_ *cobra.Command, _ []string) error {
-	cfg := mustConfig()
-	db, err := database.Connect(context.Background(), cfg.Database)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-	v, dirty, err := db.MigrateVersion()
-	if err != nil {
-		return err
-	}
-	if dirty {
-		fmt.Printf("version %d (dirty)\n", v)
-	} else {
-		fmt.Printf("version %d\n", v)
-	}
+	fmt.Println("schema migration applied")
 	return nil
 }
 
@@ -211,23 +164,22 @@ func runInstall(_ *cobra.Command, _ []string) error {
 	cfg := mustConfig()
 	ctx := context.Background()
 
-	db, err := database.Connect(ctx, cfg.Database)
+	client, err := database.Open(ctx, cfg.Database)
 	if err != nil {
 		return fmt.Errorf("database connect: %w", err)
 	}
-	defer db.Close()
+	defer client.Close()
 
-	if err := db.MigrateUp(); err != nil {
+	if err := database.Migrate(ctx, client); err != nil {
 		return fmt.Errorf("migrations: %w", err)
 	}
 
-	st := postgres.New(db)
-	existing, err := st.Users().ListUsers(ctx)
+	existing, err := client.User.Query().All(ctx)
 	if err != nil {
 		return fmt.Errorf("list users: %w", err)
 	}
 	for _, u := range existing {
-		if u.Role == models.RoleAdmin {
+		if u.Role == entuser.RoleAdmin {
 			fmt.Printf("Admin user %q already exists — nothing to do.\n", u.Username)
 			return nil
 		}
@@ -249,12 +201,12 @@ func runInstall(_ *cobra.Command, _ []string) error {
 	if err != nil {
 		return fmt.Errorf("hash password: %w", err)
 	}
-	if err := st.Users().CreateUser(ctx, &models.User{
-		Username:     adminUser,
-		PasswordHash: hash,
-		Role:         models.RoleAdmin,
-		IsActive:     true,
-	}); err != nil {
+	if _, err := client.User.Create().
+		SetUsername(adminUser).
+		SetPasswordHash(hash).
+		SetRole(entuser.RoleAdmin).
+		SetIsActive(true).
+		Save(ctx); err != nil {
 		return fmt.Errorf("create admin user: %w", err)
 	}
 	fmt.Printf("Admin user %q created.\n", adminUser)
@@ -264,7 +216,6 @@ func runInstall(_ *cobra.Command, _ []string) error {
 		fmt.Printf("\nDownloading fos-next artifacts from %s\n", cfg.FOS.ReleaseURL)
 		d := fos.New(cfg.FOS, cfg.Storage.KernelPath)
 		if err := d.Download(context.Background()); err != nil {
-			// Non-fatal: warn rather than fail the install.
 			fmt.Printf("Warning: fos-next download failed: %v\n", err)
 			fmt.Println("You can retry later with: fog fetch-kernels")
 		} else {
@@ -340,16 +291,13 @@ func runMigrateLegacy(legacyDSN string) error {
 	cfg := mustConfig()
 	ctx := context.Background()
 
-	// Connect to new PostgreSQL store
-	db, err := database.Connect(ctx, cfg.Database)
+	client, err := database.Open(ctx, cfg.Database)
 	if err != nil {
 		return fmt.Errorf("connect to postgres: %w", err)
 	}
-	defer db.Close()
-	st := postgres.New(db)
+	defer client.Close()
 
-	// Connect to legacy MySQL
-	runner, err := legacymigrate.New(legacymigrate.Config{DSN: legacyDSN}, st)
+	runner, err := legacymigrate.New(legacymigrate.Config{DSN: legacyDSN}, client)
 	if err != nil {
 		return fmt.Errorf("connect to legacy database: %w", err)
 	}
@@ -373,7 +321,8 @@ func runMigrateLegacy(legacyDSN string) error {
 
 // -------------------------------------------------------------- version ---
 
-func versionCmd() *cobra.Command {	return &cobra.Command{
+func versionCmd() *cobra.Command {
+	return &cobra.Command{
 		Use:   "version",
 		Short: "Print the fog version",
 		Run: func(_ *cobra.Command, _ []string) {
@@ -409,12 +358,12 @@ func setupLogger(cfg *config.Config) {
 func promptPassword(label string) string {
 	fmt.Printf("  %s: ", label)
 	b, err := term.ReadPassword(int(os.Stdin.Fd()))
-	fmt.Println() // newline after hidden input
+	fmt.Println()
 	if err != nil {
-		// Fall back to plain Scanln if stdin is not a terminal (e.g. piped input).
 		var v string
 		_, _ = fmt.Scanln(&v)
 		return v
 	}
 	return string(b)
 }
+

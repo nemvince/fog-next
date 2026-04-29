@@ -1,176 +1,166 @@
 package handlers
 
 import (
-	"database/sql"
-	"errors"
-	"net/http"
+"net/http"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/nemvince/fog-next/internal/api/response"
-	fogauth "github.com/nemvince/fog-next/internal/auth"
-	"github.com/nemvince/fog-next/internal/config"
-	"github.com/nemvince/fog-next/internal/models"
-	"github.com/nemvince/fog-next/internal/store"
+"github.com/go-chi/chi/v5"
+"github.com/nemvince/fog-next/ent"
+entuser "github.com/nemvince/fog-next/ent/user"
+"github.com/nemvince/fog-next/internal/api/response"
+fogauth "github.com/nemvince/fog-next/internal/auth"
+"github.com/nemvince/fog-next/internal/config"
 )
 
 type Users struct {
-	cfg   *config.Config
-	store store.Store
+cfg *config.Config
+db  *ent.Client
 }
 
-func NewUsers(cfg *config.Config, st store.Store) *Users { return &Users{cfg, st} }
+func NewUsers(cfg *config.Config, db *ent.Client) *Users { return &Users{cfg, db} }
 
 func (h *Users) List(w http.ResponseWriter, r *http.Request) {
-	users, err := h.store.Users().ListUsers(r.Context())
-	if err != nil {
-		response.InternalError(w)
-		return
-	}
-	response.OK(w, response.ListOf(users))
+users, err := h.db.User.Query().Limit(200).All(r.Context())
+if err != nil {
+response.InternalError(w)
+return
+}
+response.OK(w, response.ListOf(users))
 }
 
 func (h *Users) Get(w http.ResponseWriter, r *http.Request) {
-	id, ok := parseUUID(w, chi.URLParam(r, "id"))
-	if !ok {
-		return
-	}
-	u, err := h.store.Users().GetUser(r.Context(), id)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			response.NotFound(w, "user")
-			return
-		}
-		response.InternalError(w)
-		return
-	}
-	response.OK(w, u)
+id, ok := parseUUID(w, chi.URLParam(r, "id"))
+if !ok {
+return
+}
+u, err := h.db.User.Get(r.Context(), id)
+if err != nil {
+if ent.IsNotFound(err) {
+response.NotFound(w, "user")
+return
+}
+response.InternalError(w)
+return
+}
+response.OK(w, u)
 }
 
 func (h *Users) Create(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		Username string          `json:"username"`
-		Password string          `json:"password"`
-		Role     models.UserRole `json:"role"`
-		Email    string          `json:"email"`
-	}
-	if !response.Decode(w, r, &body) {
-		return
-	}
-	if body.Username == "" || body.Password == "" {
-		response.BadRequest(w, "username and password are required")
-		return
-	}
-
-	hash, err := fogauth.HashPassword(body.Password)
-	if err != nil {
-		response.InternalError(w)
-		return
-	}
-
-	u := &models.User{
-		Username:     body.Username,
-		PasswordHash: hash,
-		Role:         body.Role,
-		Email:        body.Email,
-		IsActive:     true,
-	}
-	if u.Role == "" {
-		u.Role = models.RoleReadOnly
-	}
-
-	if err := h.store.Users().CreateUser(r.Context(), u); err != nil {
-		response.InternalError(w)
-		return
-	}
-	writeAudit(r.Context(), h.store, r, "create", "user", u.ID.String(), u.Username)
-	response.Created(w, u)
+var body struct {
+Username string         `json:"username"`
+Password string         `json:"password"`
+Role     entuser.Role   `json:"role"`
+Email    string         `json:"email"`
+}
+if !response.Decode(w, r, &body) {
+return
+}
+if body.Username == "" || body.Password == "" {
+response.BadRequest(w, "username and password are required")
+return
+}
+hash, err := fogauth.HashPassword(body.Password)
+if err != nil {
+response.InternalError(w)
+return
+}
+if body.Role == "" {
+body.Role = entuser.RoleReadonly
+}
+u, err := h.db.User.Create().
+SetUsername(body.Username).
+SetPasswordHash(hash).
+SetRole(body.Role).
+SetEmail(body.Email).
+SetIsActive(true).
+Save(r.Context())
+if err != nil {
+response.InternalError(w)
+return
+}
+writeAudit(r.Context(), h.db, r, "create", "user", u.ID.String(), u.Username)
+response.Created(w, u)
 }
 
 func (h *Users) Update(w http.ResponseWriter, r *http.Request) {
-	id, ok := parseUUID(w, chi.URLParam(r, "id"))
-	if !ok {
-		return
-	}
-	existing, err := h.store.Users().GetUser(r.Context(), id)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			response.NotFound(w, "user")
-			return
-		}
-		response.InternalError(w)
-		return
-	}
-
-	var body struct {
-		Email    string          `json:"email"`
-		Role     models.UserRole `json:"role"`
-		IsActive bool            `json:"isActive"`
-		Password string          `json:"password"` // optional — only set when non-empty
-	}
-	if !response.Decode(w, r, &body) {
-		return
-	}
-
-	if body.Email != "" {
-		existing.Email = body.Email
-	}
-	if body.Role != "" {
-		existing.Role = body.Role
-	}
-	existing.IsActive = body.IsActive
-
-	if body.Password != "" {
-		hash, err := fogauth.HashPassword(body.Password)
-		if err != nil {
-			response.InternalError(w)
-			return
-		}
-		existing.PasswordHash = hash
-	}
-
-	if err := h.store.Users().UpdateUser(r.Context(), existing); err != nil {
-		response.InternalError(w)
-		return
-	}
-	response.OK(w, existing)
+id, ok := parseUUID(w, chi.URLParam(r, "id"))
+if !ok {
+return
+}
+existing, err := h.db.User.Get(r.Context(), id)
+if err != nil {
+if ent.IsNotFound(err) {
+response.NotFound(w, "user")
+return
+}
+response.InternalError(w)
+return
+}
+var body struct {
+Email    string       `json:"email"`
+Role     entuser.Role `json:"role"`
+IsActive bool         `json:"isActive"`
+Password string       `json:"password"`
+}
+if !response.Decode(w, r, &body) {
+return
+}
+up := h.db.User.UpdateOneID(id).
+SetEmail(body.Email).
+SetIsActive(body.IsActive)
+if body.Role != "" {
+up = up.SetRole(body.Role)
+}
+if body.Password != "" {
+hash, err := fogauth.HashPassword(body.Password)
+if err != nil {
+response.InternalError(w)
+return
+}
+up = up.SetPasswordHash(hash)
+}
+_ = existing // used for 404 check above
+updated, err := up.Save(r.Context())
+if err != nil {
+response.InternalError(w)
+return
+}
+response.OK(w, updated)
 }
 
 func (h *Users) Delete(w http.ResponseWriter, r *http.Request) {
-	id, ok := parseUUID(w, chi.URLParam(r, "id"))
-	if !ok {
-		return
-	}
-	if err := h.store.Users().DeleteUser(r.Context(), id); err != nil {
-		response.InternalError(w)
-		return
-	}
-	writeAudit(r.Context(), h.store, r, "delete", "user", id.String(), "")
-	response.NoContent(w)
+id, ok := parseUUID(w, chi.URLParam(r, "id"))
+if !ok {
+return
+}
+if err := h.db.User.DeleteOneID(id).Exec(r.Context()); err != nil {
+response.InternalError(w)
+return
+}
+writeAudit(r.Context(), h.db, r, "delete", "user", id.String(), "")
+response.NoContent(w)
 }
 
 func (h *Users) RegenerateToken(w http.ResponseWriter, r *http.Request) {
-	id, ok := parseUUID(w, chi.URLParam(r, "id"))
-	if !ok {
-		return
-	}
-	u, err := h.store.Users().GetUser(r.Context(), id)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			response.NotFound(w, "user")
-			return
-		}
-		response.InternalError(w)
-		return
-	}
-	token, err := fogauth.GenerateAPIToken()
-	if err != nil {
-		response.InternalError(w)
-		return
-	}
-	u.APIToken = token
-	if err := h.store.Users().UpdateUser(r.Context(), u); err != nil {
-		response.InternalError(w)
-		return
-	}
-	response.OK(w, map[string]string{"apiToken": token})
+id, ok := parseUUID(w, chi.URLParam(r, "id"))
+if !ok {
+return
+}
+if _, err := h.db.User.Get(r.Context(), id); err != nil {
+if ent.IsNotFound(err) {
+response.NotFound(w, "user")
+return
+}
+response.InternalError(w)
+return
+}
+token, err := fogauth.GenerateAPIToken()
+if err != nil {
+response.InternalError(w)
+return
+}
+if err := h.db.User.UpdateOneID(id).SetAPIToken(token).Exec(r.Context()); err != nil {
+response.InternalError(w)
+return
+}
+response.OK(w, map[string]string{"apiToken": token})
 }

@@ -11,11 +11,11 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/nemvince/fog-next/ent"
 	"github.com/nemvince/fog-next/internal/api/handlers"
 	"github.com/nemvince/fog-next/internal/api/middleware"
 	"github.com/nemvince/fog-next/internal/config"
 	"github.com/nemvince/fog-next/internal/plugins"
-	"github.com/nemvince/fog-next/internal/store"
 	"github.com/nemvince/fog-next/internal/ws"
 )
 
@@ -25,7 +25,7 @@ var embeddedStatic embed.FS
 // Server is the HTTP server for the FOG API and web UI.
 type Server struct {
 	cfg     *config.Config
-	store   store.Store
+	db      *ent.Client
 	hub     *ws.Hub
 	plugins *plugins.Registry
 	router  *chi.Mux
@@ -35,8 +35,8 @@ type Server struct {
 
 // New creates a configured Server ready to serve. It uses the
 // plugins.DefaultRegistry for hook dispatch unless WithPlugins is called.
-func New(cfg *config.Config, st store.Store) *Server {
-	s := &Server{cfg: cfg, store: st, hub: ws.New(), plugins: plugins.DefaultRegistry}
+func New(cfg *config.Config, db *ent.Client) *Server {
+	s := &Server{cfg: cfg, db: db, hub: ws.New(), plugins: plugins.DefaultRegistry}
 	s.router = s.buildRouter()
 	s.http = &http.Server{
 		Addr:              cfg.Server.HTTP,
@@ -110,7 +110,7 @@ func (s *Server) buildRouter() *chi.Mux {
 	// ── REST API v1 ─────────────────────────────────────────────────
 	r.Route("/fog/api/v1", func(r chi.Router) {
                 // Public (no auth required) — rate-limited to 10 req/s burst 20 per IP
-                authH := handlers.NewAuth(s.cfg, s.store)
+                authH := handlers.NewAuth(s.cfg, s.db)
                 authRL := middleware.NewRateLimiter(10, 20)
                 r.With(authRL.Handler).Post("/auth/login", authH.Login)
                 r.With(authRL.Handler).Post("/auth/refresh", authH.Refresh)
@@ -118,7 +118,7 @@ func (s *Server) buildRouter() *chi.Mux {
 		// ── Boot API (fos-agent endpoints) ─────────────────────
 		// Unauthenticated endpoints (handshake and register are public).
 		bootRL := middleware.NewRateLimiter(5, 10)
-		bootAPIH := handlers.NewBootAPI(s.cfg, s.store)
+		bootAPIH := handlers.NewBootAPI(s.cfg, s.db)
 		r.With(bootRL.Handler).Post("/boot/handshake", bootAPIH.Handshake)
 		r.With(bootRL.Handler).Post("/boot/register", bootAPIH.Register)
 		// Boot-token-authenticated endpoints.
@@ -138,7 +138,7 @@ func (s *Server) buildRouter() *chi.Mux {
 
 			r.Post("/auth/logout", authH.Logout)
 
-			hostH := handlers.NewHosts(s.store, s.plugins)
+			hostH := handlers.NewHosts(s.db, s.plugins)
 			r.Route("/hosts", func(r chi.Router) {
 				r.Get("/", hostH.List)
 				r.Post("/", hostH.Create)
@@ -155,7 +155,7 @@ func (s *Server) buildRouter() *chi.Mux {
 			})
 			r.Get("/pending-macs", hostH.ListPendingMACs)
 
-			imgH := handlers.NewImages(s.store, &s.cfg.Storage)
+			imgH := handlers.NewImages(s.db, &s.cfg.Storage)
 			r.Route("/images", func(r chi.Router) {
 				r.Get("/", imgH.List)
 				r.Post("/", imgH.Create)
@@ -168,7 +168,7 @@ func (s *Server) buildRouter() *chi.Mux {
 				})
 			})
 
-			grpH := handlers.NewGroups(s.store)
+			grpH := handlers.NewGroups(s.db)
 			r.Route("/groups", func(r chi.Router) {
 				r.Get("/", grpH.List)
 				r.Post("/", grpH.Create)
@@ -182,7 +182,7 @@ func (s *Server) buildRouter() *chi.Mux {
 				})
 			})
 
-			taskH := handlers.NewTasks(s.store, s.plugins)
+			taskH := handlers.NewTasks(s.db, s.plugins)
 			r.Route("/tasks", func(r chi.Router) {
 				r.Get("/", taskH.List)
 				r.Post("/", taskH.Create)
@@ -193,7 +193,7 @@ func (s *Server) buildRouter() *chi.Mux {
 				})
 			})
 
-			snapH := handlers.NewSnapins(s.cfg, s.store)
+			snapH := handlers.NewSnapins(s.cfg, s.db)
 			r.Route("/snapins", func(r chi.Router) {
 				r.Get("/", snapH.List)
 				r.Post("/", snapH.Create)
@@ -205,7 +205,7 @@ func (s *Server) buildRouter() *chi.Mux {
 				})
 			})
 
-			storH := handlers.NewStorage(s.store)
+			storH := handlers.NewStorage(s.db)
 			r.Route("/storage/groups", func(r chi.Router) {
 				r.Get("/", storH.ListGroups)
 				r.Post("/", storH.CreateGroup)
@@ -223,7 +223,7 @@ func (s *Server) buildRouter() *chi.Mux {
 				r.Delete("/", storH.DeleteNode)
 			})
 
-			userH := handlers.NewUsers(s.cfg, s.store)
+			userH := handlers.NewUsers(s.cfg, s.db)
 			r.Route("/users", func(r chi.Router) {
 				r.Get("/", userH.List)
 				r.Post("/", userH.Create)
@@ -235,14 +235,14 @@ func (s *Server) buildRouter() *chi.Mux {
 				})
 			})
 
-			settH := handlers.NewSettings(s.store)
+			settH := handlers.NewSettings(s.db)
 			r.Route("/settings", func(r chi.Router) {
 				r.Get("/", settH.List)
 				r.Put("/{key}", settH.Set)
 				r.Delete("/{key}", settH.Delete)
 			})
 
-			rptH := handlers.NewReports(s.store)
+			rptH := handlers.NewReports(s.db)
 			r.Route("/reports", func(r chi.Router) {
 				r.Get("/imaging", rptH.ImagingHistory)
 				r.Get("/inventory", rptH.HostInventory)
@@ -255,18 +255,18 @@ func (s *Server) buildRouter() *chi.Mux {
 
 	// ── Legacy client endpoints (FOG 1.x client compatibility) ──────
 	r.Route("/fog/service", func(r chi.Router) {
-		legacyH := handlers.NewLegacy(s.cfg, s.store)
+		legacyH := handlers.NewLegacy(s.cfg, s.db)
 		r.Post("/register.php", legacyH.Register)
 		r.Get("/hostinfo.php", legacyH.HostInfo)
 		r.Post("/progress.php", legacyH.Progress)
 		r.Get("/jobs.php", legacyH.Jobs)
 	})
 	r.Get("/fog/service/ipxe/boot.php", func(w http.ResponseWriter, req *http.Request) {
-		handlers.NewBoot(s.cfg, s.store).ServeHTTP(w, req)
+		handlers.NewBoot(s.cfg, s.db).ServeHTTP(w, req)
 	})
 	// Primary iPXE boot endpoint (used by chain-load from DHCP option 67).
 	r.Get("/fog/boot", func(w http.ResponseWriter, req *http.Request) {
-		handlers.NewBoot(s.cfg, s.store).ServeHTTP(w, req)
+		handlers.NewBoot(s.cfg, s.db).ServeHTTP(w, req)
 	})
 
 	// Kernel/initrd file server — iPXE scripts reference these URLs to load

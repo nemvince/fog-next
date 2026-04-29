@@ -4,111 +4,108 @@
 package pxe
 
 import (
-	"bytes"
-	"context"
-	"fmt"
-	"strings"
-	"text/template"
+"bytes"
+"context"
+"fmt"
+"strings"
+"text/template"
 
-	"github.com/nemvince/fog-next/internal/models"
-	"github.com/nemvince/fog-next/internal/store"
+"github.com/nemvince/fog-next/ent"
+enttask "github.com/nemvince/fog-next/ent/task"
+"github.com/nemvince/fog-next/ent/hostmac"
 )
 
 // BootParams contains everything the boot script generator needs.
 type BootParams struct {
-	Host       *models.Host  // nil if unregistered
-	Task       *models.Task  // nil if no pending task
-	ServerURL  string        // e.g. "http://10.0.0.1"
-	KernelURL  string        // base URL for kernel/initrd
-	KernelArgs string        // pre-computed kernel command-line args
+Host       *ent.Host  // nil if unregistered
+Task       *ent.Task  // nil if no pending task
+ServerURL  string     // e.g. "http://10.0.0.1"
+KernelURL  string     // base URL for kernel/initrd
+KernelArgs string     // pre-computed kernel command-line args
 }
 
 // GenerateScript returns the iPXE script for the given parameters.
 func GenerateScript(p BootParams) ([]byte, error) {
-	var tmplStr string
+var tmplStr string
 
-	switch {
-	case p.Host == nil:
-		p.KernelArgs = buildKernelArgs(p, "fog_action=register")
-		tmplStr = registerScript
-	case p.Task != nil && p.Task.Type == models.TaskTypeDeploy:
-		p.KernelArgs = buildKernelArgs(p, "fog_action=deploy")
-		tmplStr = deployScript
-	case p.Task != nil && p.Task.Type == models.TaskTypeCapture:
-		p.KernelArgs = buildKernelArgs(p, "fog_action=capture")
-		tmplStr = captureScript
-	case p.Task != nil && p.Task.Type == models.TaskTypeMulticast:
-		p.KernelArgs = buildKernelArgs(p, "fog_action=multicast")
-		tmplStr = multicastScript
-	case p.Task != nil && p.Task.Type == models.TaskTypeDebugDeploy,
-		p.Task != nil && p.Task.Type == models.TaskTypeDebugCapture:
-		p.KernelArgs = buildKernelArgs(p, "fog_action=debug")
-		tmplStr = debugScript
-	case p.Task != nil && p.Task.Type == models.TaskTypeMemTest:
-		p.KernelArgs = buildKernelArgs(p, "")
-		tmplStr = memtestScript
-	default:
-		tmplStr = localBootScript
-	}
-
-	t, err := template.New("ipxe").Parse(tmplStr)
-	if err != nil {
-		return nil, fmt.Errorf("pxe template parse: %w", err)
-	}
-
-	var buf bytes.Buffer
-	if err := t.Execute(&buf, p); err != nil {
-		return nil, fmt.Errorf("pxe template execute: %w", err)
-	}
-	return buf.Bytes(), nil
+switch {
+case p.Host == nil:
+p.KernelArgs = buildKernelArgs(p, "fog_action=register")
+tmplStr = registerScript
+case p.Task != nil && p.Task.Type == enttask.TypeDeploy:
+p.KernelArgs = buildKernelArgs(p, "fog_action=deploy")
+tmplStr = deployScript
+case p.Task != nil && p.Task.Type == enttask.TypeCapture:
+p.KernelArgs = buildKernelArgs(p, "fog_action=capture")
+tmplStr = captureScript
+case p.Task != nil && p.Task.Type == enttask.TypeMulticast:
+p.KernelArgs = buildKernelArgs(p, "fog_action=multicast")
+tmplStr = multicastScript
+case p.Task != nil && p.Task.Type == enttask.TypeDebugDeploy,
+p.Task != nil && p.Task.Type == enttask.TypeDebugCapture:
+p.KernelArgs = buildKernelArgs(p, "fog_action=debug")
+tmplStr = debugScript
+case p.Task != nil && p.Task.Type == enttask.TypeMemtest:
+p.KernelArgs = buildKernelArgs(p, "")
+tmplStr = memtestScript
+default:
+tmplStr = localBootScript
 }
 
-// BootParamsForMAC resolves the BootParams for a given MAC address by
-// looking up the host and any queued task in the store.
-func BootParamsForMAC(ctx context.Context, st store.Store, mac, serverURL string) (BootParams, error) {
-	p := BootParams{ServerURL: serverURL, KernelURL: serverURL + "/fog/kernel"}
+t, err := template.New("ipxe").Parse(tmplStr)
+if err != nil {
+return nil, fmt.Errorf("pxe template parse: %w", err)
+}
 
-	host, err := st.Hosts().GetHostByMAC(ctx, mac)
-	if err != nil {
-		// Not found — unregistered host.
-		return p, nil
-	}
-	p.Host = host
+var buf bytes.Buffer
+if err := t.Execute(&buf, p); err != nil {
+return nil, fmt.Errorf("pxe template execute: %w", err)
+}
+return buf.Bytes(), nil
+}
 
-	task, err := st.Tasks().GetHostActiveTask(ctx, host.ID)
-	if err == nil {
-		p.Task = task
-	}
-	return p, nil
+// BootParamsForMAC resolves the BootParams for a given MAC address.
+func BootParamsForMAC(ctx context.Context, db *ent.Client, mac, serverURL string) (BootParams, error) {
+p := BootParams{ServerURL: serverURL, KernelURL: serverURL + "/fog/kernel"}
+
+host, err := db.HostMAC.Query().Where(hostmac.MACEQ(mac)).QueryHost().Only(ctx)
+if err != nil {
+// Not found — unregistered host.
+return p, nil
+}
+p.Host = host
+
+task, err := db.Task.Query().Where(
+enttask.HostIDEQ(host.ID),
+enttask.StateIn(enttask.StateQueued, enttask.StateActive),
+).Order(enttask.ByCreatedAt()).First(ctx)
+if err == nil {
+p.Task = task
+}
+return p, nil
 }
 
 // buildKernelArgs assembles the kernel command-line string.
 func buildKernelArgs(p BootParams, extraArgs string) string {
-	parts := []string{
-		// Always include console targets so kernel/fos-agent output is visible.
-		// tty0 = VGA, ttyS0 = serial (both are no-ops if the hw isn't present).
-		"console=tty0",
-		"console=ttyS0,115200",
-		// earlyprintk captures output before the full console subsystem is up,
-		// including early panics (e.g. initramfs decompression failures).
-		// efi works on UEFI/OVMF; vga works on legacy BIOS — efi is the safe default
-		// for modern hardware and Proxmox Q35+OVMF VMs.
-		"earlyprintk=efi,keep",
-		fmt.Sprintf("fog_server=%s", p.ServerURL),
-	}
-	if p.Host != nil {
-		parts = append(parts, fmt.Sprintf("fog_host=%s", p.Host.Name))
-		if p.Host.KernelArgs != "" {
-			parts = append(parts, p.Host.KernelArgs)
-		}
-	}
-	if p.Task != nil {
-		parts = append(parts, fmt.Sprintf("fog_task=%s", p.Task.ID))
-	}
-	if extraArgs != "" {
-		parts = append(parts, extraArgs)
-	}
-	return strings.Join(parts, " ")
+parts := []string{
+"console=tty0",
+"console=ttyS0,115200",
+"earlyprintk=efi,keep",
+fmt.Sprintf("fog_server=%s", p.ServerURL),
+}
+if p.Host != nil {
+parts = append(parts, fmt.Sprintf("fog_host=%s", p.Host.Name))
+if p.Host.KernelArgs != "" {
+parts = append(parts, p.Host.KernelArgs)
+}
+}
+if p.Task != nil {
+parts = append(parts, fmt.Sprintf("fog_task=%s", p.Task.ID))
+}
+if extraArgs != "" {
+parts = append(parts, extraArgs)
+}
+return strings.Join(parts, " ")
 }
 
 // ---------------------------------------------------------------- templates
