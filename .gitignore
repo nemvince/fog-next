@@ -1,5 +1,5 @@
-# built binary
-/fog
+# built binaries
+build
 
 # built frontend
 internal/api/static/*
