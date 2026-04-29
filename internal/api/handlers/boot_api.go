@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -52,13 +53,15 @@ type handshakeRequest struct {
 }
 
 type handshakeResponse struct {
-	BootToken      string  `json:"bootToken"`
-	TaskID         string  `json:"taskId"`
-	Action         string  `json:"action"`
-	ImageID        string  `json:"imageId,omitempty"`
-	PartCount      int     `json:"partCount,omitempty"`
-	TotalBytes     int64   `json:"totalBytes,omitempty"`
-	StorageNodeURL string  `json:"storageNodeUrl,omitempty"`
+	BootToken           string `json:"bootToken"`
+	TaskID              string `json:"taskId"`
+	Action              string `json:"action"`
+	ImageID             string `json:"imageId,omitempty"`
+	PartCount           int    `json:"partCount,omitempty"`
+	TotalBytes          int64  `json:"totalBytes,omitempty"`
+	StorageNodeURL      string `json:"storageNodeUrl,omitempty"`
+	ImageType           string `json:"imageType,omitempty"`
+	FixedSizePartitions []int  `json:"fixedSizePartitions,omitempty"`
 }
 
 func (h *BootAPI) Handshake(w http.ResponseWriter, r *http.Request) {
@@ -136,8 +139,12 @@ func (h *BootAPI) Handshake(w http.ResponseWriter, r *http.Request) {
 
 		img, imgErr := h.store.Images().GetImage(r.Context(), *task.ImageID)
 		if imgErr == nil {
-			resp.PartCount = partCount(img)
 			resp.TotalBytes = img.SizeBytes
+			if ip := parseImagePartitions(img); ip != nil {
+				resp.PartCount = ip.PartCount
+				resp.ImageType = ip.ImageType
+				resp.FixedSizePartitions = ip.FixedSizePartitions
+			}
 			if task.StorageNodeID != nil {
 				node, nodeErr := h.store.Storage().GetStorageNode(r.Context(), *task.StorageNodeID)
 				if nodeErr == nil && node.IsEnabled {
@@ -594,17 +601,95 @@ func partFilename(part int) string {
 	return "part" + strconv.Itoa(part)
 }
 
-// partCount returns the number of image partitions stored for an image.
-// Uses stored partition metadata if available, otherwise returns 1.
-func partCount(img *models.Image) int {
-	if len(img.Partitions) > 0 {
-		// Partitions is a JSONB array; count the top-level elements.
-		// A simple heuristic: count '"' pairs divided by the minimum JSON
-		// per-object overhead is fragile — just default to 1 and trust the
-		// handshake response. A proper implementation would unmarshal the JSON.
-		return 1
+// parseImagePartitions unmarshals the Image.Partitions JSONB field into an
+// ImagePartitions struct.  Returns nil if the field is empty or unparseable.
+func parseImagePartitions(img *models.Image) *models.ImagePartitions {
+	if len(img.Partitions) == 0 {
+		return nil
 	}
-	return 1
+	var ip models.ImagePartitions
+	if err := json.Unmarshal(img.Partitions, &ip); err != nil {
+		slog.Warn("parseImagePartitions: malformed JSONB", "imageId", img.ID, "err", err)
+		return nil
+	}
+	return &ip
+}
+
+// ------------------------------------------------------------------
+// ImageMeta — POST /fog/api/v1/boot/images/meta  (boot-token auth)
+// Called by the fos-next agent at the end of a successful capture to
+// record partition metadata for future deploy operations.
+// ------------------------------------------------------------------
+
+type imageMetaRequest struct {
+	TaskID              string `json:"taskId"`
+	ImageID             string `json:"imageId"`
+	ImageType           string `json:"imageType"`
+	FixedSizePartitions []int  `json:"fixedSizePartitions"`
+	PartCount           int    `json:"partCount"`
+}
+
+func (h *BootAPI) ImageMeta(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.BootClaimsFrom(r.Context())
+	if claims == nil {
+		response.Unauthorized(w)
+		return
+	}
+
+	var req imageMetaRequest
+	if !response.Decode(w, r, &req) {
+		return
+	}
+
+	taskID, err := uuid.Parse(req.TaskID)
+	if err != nil || taskID != claims.TaskID {
+		response.BadRequest(w, "task ID mismatch")
+		return
+	}
+
+	imageID, err := uuid.Parse(req.ImageID)
+	if err != nil {
+		response.BadRequest(w, "invalid image ID")
+		return
+	}
+
+	// Confirm the task owns this image.
+	task, err := h.store.Tasks().GetTask(r.Context(), taskID)
+	if err != nil || task.ImageID == nil || *task.ImageID != imageID {
+		response.Forbidden(w)
+		return
+	}
+
+	img, err := h.store.Images().GetImage(r.Context(), imageID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			response.NotFound(w, "image")
+			return
+		}
+		response.InternalError(w)
+		return
+	}
+
+	ip := models.ImagePartitions{
+		PartCount:           req.PartCount,
+		ImageType:           req.ImageType,
+		FixedSizePartitions: req.FixedSizePartitions,
+	}
+	partJSON, err := json.Marshal(ip)
+	if err != nil {
+		response.InternalError(w)
+		return
+	}
+	img.Partitions = partJSON
+
+	if err := h.store.Images().UpdateImage(r.Context(), img); err != nil {
+		slog.Error("ImageMeta: update image failed", "imageId", imageID, "err", err)
+		response.InternalError(w)
+		return
+	}
+
+	slog.Info("ImageMeta saved", "imageId", imageID, "partCount", ip.PartCount, "imageType", ip.ImageType)
+	response.NoContent(w)
 }
 
 // normMAC lowercases a MAC address for consistent comparison.

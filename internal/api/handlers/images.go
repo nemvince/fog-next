@@ -58,6 +58,9 @@ func (h *Images) Create(w http.ResponseWriter, r *http.Request) {
 		response.BadRequest(w, "name is required")
 		return
 	}
+	// Partition metadata is written exclusively by the agent after capture.
+	// Reject any user-supplied value.
+	img.Partitions = nil
 	if err := h.store.Images().CreateImage(r.Context(), &img); err != nil {
 		response.InternalError(w)
 		return
@@ -79,10 +82,13 @@ func (h *Images) Update(w http.ResponseWriter, r *http.Request) {
 		response.InternalError(w)
 		return
 	}
+	// Preserve partition metadata — it is written by the agent, not the user.
+	savedPartitions := existing.Partitions
 	if !response.Decode(w, r, existing) {
 		return
 	}
 	existing.ID = id
+	existing.Partitions = savedPartitions
 	if err := h.store.Images().UpdateImage(r.Context(), existing); err != nil {
 		response.InternalError(w)
 		return

@@ -32,6 +32,15 @@ type Image struct {
 	ImageType   *ImageType   `db:"-" json:"imageType,omitempty"`
 }
 
+// ImagePartitions is the canonical schema stored in Image.Partitions (JSONB).
+// It is written exclusively by the fos-next agent at the end of a successful
+// capture; users cannot modify it through the REST API.
+type ImagePartitions struct {
+	PartCount           int    `json:"partCount"`
+	ImageType           string `json:"imageType"`                     // "resizable", "fixed", or "dd"
+	FixedSizePartitions []int  `json:"fixedSizePartitions,omitempty"` // 1-based
+}
+
 // ImageType (e.g. "Single Partition", "Multiple Partition with Single Disk").
 type ImageType struct {
 	ID          uuid.UUID `db:"id"          json:"id"`

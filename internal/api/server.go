@@ -126,6 +126,7 @@ func (s *Server) buildRouter() *chi.Mux {
 			r.Use(middleware.AuthenticateBoot(s.cfg))
 			r.Post("/boot/progress", bootAPIH.Progress)
 			r.Post("/boot/complete", bootAPIH.Complete)
+			r.Post("/boot/images/meta", bootAPIH.ImageMeta)
 			r.Route("/boot/images/{id}", func(r chi.Router) {
 				r.Get("/download", bootAPIH.Download)
 				r.Put("/upload", bootAPIH.Upload)

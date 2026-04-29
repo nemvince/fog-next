@@ -1,40 +1,38 @@
 import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-	AlertDialogTrigger,
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
 } from "@/components/ui/dialog";
 import {
-	Field,
-	FieldDescription,
-	FieldError,
-	FieldGroup,
-	FieldLabel,
+    Field,
+    FieldError,
+    FieldGroup,
+    FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
 } from "@/components/ui/table";
-import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import type { Image, Paginated } from "@/types";
 import { Pencil, Plus, Trash } from "@phosphor-icons/react";
@@ -42,10 +40,10 @@ import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
-	createColumnHelper,
-	flexRender,
-	getCoreRowModel,
-	useReactTable,
+    createColumnHelper,
+    flexRender,
+    getCoreRowModel,
+    useReactTable,
 } from "@tanstack/react-table";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -80,15 +78,6 @@ const imageSchema = z.object({
 	name: z.string().min(1, "Name is required"),
 	description: z.string(),
 	path: z.string().min(1, "Path is required"),
-	partitions: z.string().refine((v) => {
-		if (!v || v.trim() === "") return true;
-		try {
-			JSON.parse(v);
-			return true;
-		} catch {
-			return false;
-		}
-	}, "Must be valid JSON"),
 });
 
 function ImagesPage() {
@@ -104,11 +93,7 @@ function ImagesPage() {
 
 	const createMutation = useMutation({
 		mutationFn: (values: z.infer<typeof imageSchema>) => {
-			const body = {
-				...values,
-				partitions: values.partitions ? JSON.parse(values.partitions) : undefined,
-			};
-			return api.post<Image>("/images", body);
+			return api.post<Image>("/images", values);
 		},
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: ["images"] });
@@ -120,11 +105,7 @@ function ImagesPage() {
 
 	const updateMutation = useMutation({
 		mutationFn: ({ id, values }: { id: string; values: z.infer<typeof imageSchema> }) => {
-			const body = {
-				...values,
-				partitions: values.partitions ? JSON.parse(values.partitions) : undefined,
-			};
-			return api.put<Image>(`/images/${id}`, body);
+			return api.put<Image>(`/images/${id}`, values);
 		},
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: ["images"] });
@@ -144,7 +125,7 @@ function ImagesPage() {
 	});
 
 	const form = useForm({
-		defaultValues: { name: "", description: "", path: "", partitions: "" },
+		defaultValues: { name: "", description: "", path: "" },
 		validators: { onSubmit: imageSchema },
 		onSubmit: ({ value }) => createMutation.mutate(value),
 	});
@@ -154,7 +135,6 @@ function ImagesPage() {
 			name: editTarget?.name ?? "",
 			description: editTarget?.description ?? "",
 			path: editTarget?.path ?? "",
-			partitions: editTarget?.partitions ? JSON.stringify(editTarget.partitions, null, 2) : "",
 		},
 		validators: { onSubmit: imageSchema },
 		onSubmit: ({ value }) => {
@@ -217,28 +197,6 @@ function ImagesPage() {
 								onChange={(e) => field.handleChange(e.target.value)}
 								aria-invalid={isInvalid}
 							/>
-							{isInvalid && <FieldError errors={field.state.meta.errors} />}
-						</Field>
-					);
-				}}
-			</formInstance.Field>
-			<formInstance.Field name="partitions">
-				{(field) => {
-					const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
-					return (
-						<Field data-invalid={isInvalid}>
-							<FieldLabel htmlFor={field.name}>Partitions</FieldLabel>
-							<Textarea
-								id={field.name}
-								name={field.name}
-								value={field.state.value}
-								onBlur={field.handleBlur}
-								onChange={(e) => field.handleChange(e.target.value)}
-								aria-invalid={isInvalid}
-								className="min-h-[100px] font-mono text-xs"
-								placeholder='[{"name":"sda1","type":"ext4"}]'
-							/>
-							<FieldDescription>Optional JSON partition layout</FieldDescription>
 							{isInvalid && <FieldError errors={field.state.meta.errors} />}
 						</Field>
 					);
