@@ -115,7 +115,7 @@ return
 var req struct {
 Name        string     `json:"name"`
 Description string     `json:"description"`
-IP          string     `json:"ip"`
+IP          *string    `json:"ip"`
 ImageID     *uuid.UUID `json:"imageId"`
 KernelArgs  string     `json:"kernelArgs"`
 IsEnabled   bool       `json:"isEnabled"`
@@ -127,7 +127,7 @@ return
 updated, err := h.db.Host.UpdateOneID(id).
 SetName(req.Name).
 SetDescription(req.Description).
-SetIP(req.IP).
+SetNillableIP(req.IP).
 SetNillableImageID(req.ImageID).
 SetKernelArgs(req.KernelArgs).
 SetIsEnabled(req.IsEnabled).
@@ -179,6 +179,10 @@ return
 }
 if req.MAC == "" {
 response.BadRequest(w, "mac is required")
+return
+}
+if req.MAC == "00:00:00:00:00:00" {
+response.BadRequest(w, "invalid mac address")
 return
 }
 mac, err := h.db.HostMAC.Create().

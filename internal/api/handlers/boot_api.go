@@ -84,7 +84,11 @@ return
 // Look up host by any of the supplied MACs.
 var host *ent.Host
 for _, mac := range req.MACs {
-h2, err := h.db.HostMAC.Query().Where(hostmac.MACEQ(normMAC(mac))).QueryHost().Only(r.Context())
+normed := normMAC(mac)
+if isZeroMAC(normed) {
+continue
+}
+h2, err := h.db.HostMAC.Query().Where(hostmac.MACEQ(normed)).QueryHost().Only(r.Context())
 if err == nil {
 host = h2
 break
@@ -99,7 +103,11 @@ return
 // Unknown host — record the MACs as pending and request registration.
 if host == nil {
 for _, mac := range req.MACs {
-_ = h.db.PendingMAC.Create().SetMAC(normMAC(mac)).SetSeenAt(time.Now()).Exec(r.Context())
+normed := normMAC(mac)
+if isZeroMAC(normed) {
+continue
+}
+_ = h.db.PendingMAC.Create().SetMAC(normed).SetSeenAt(time.Now()).Exec(r.Context())
 }
 response.OK(w, handshakeResponse{Action: "register"})
 return
@@ -191,7 +199,11 @@ return
 
 // Check if host already exists for any MAC.
 for _, mac := range req.MACs {
-existing, err := h.db.HostMAC.Query().Where(hostmac.MACEQ(normMAC(mac))).QueryHost().Only(r.Context())
+normed := normMAC(mac)
+if isZeroMAC(normed) {
+continue
+}
+existing, err := h.db.HostMAC.Query().Where(hostmac.MACEQ(normed)).QueryHost().Only(r.Context())
 if err == nil {
 _ = h.db.Inventory.Create().
 SetHostID(existing.ID).
@@ -208,9 +220,22 @@ return
 }
 }
 
+// Collect valid (non-zero) MACs.
+var validMACs []string
+for _, mac := range req.MACs {
+normed := normMAC(mac)
+if !isZeroMAC(normed) {
+validMACs = append(validMACs, normed)
+}
+}
+if len(validMACs) == 0 {
+response.BadRequest(w, "no valid macs provided")
+return
+}
+
 // Create a new disabled host with the first MAC as primary.
 newHost, err := h.db.Host.Create().
-SetName("pending-" + strings.ReplaceAll(req.MACs[0], ":", "")).
+SetName("pending-" + strings.ReplaceAll(validMACs[0], ":", "")).
 SetIsEnabled(false).
 Save(r.Context())
 if err != nil {
@@ -219,10 +244,10 @@ response.InternalError(w)
 return
 }
 
-for i, mac := range req.MACs {
+for i, mac := range validMACs {
 if err := h.db.HostMAC.Create().
 SetHostID(newHost.ID).
-SetMAC(normMAC(mac)).
+SetMAC(mac).
 SetIsPrimary(i == 0).
 Exec(r.Context()); err != nil {
 slog.Warn("register: add MAC failed", "mac", mac, "err", err)
@@ -669,4 +694,8 @@ return &ip
 
 func normMAC(mac string) string {
 return strings.ToLower(strings.TrimSpace(mac))
+}
+
+func isZeroMAC(mac string) bool {
+return mac == "00:00:00:00:00:00"
 }

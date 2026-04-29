@@ -28,7 +28,7 @@ return &Legacy{cfg, db}
 // in the database. Unknown MACs are added to pending_macs for admin review.
 func (h *Legacy) Register(w http.ResponseWriter, r *http.Request) {
 mac := strings.ToLower(strings.TrimSpace(r.FormValue("mac")))
-if mac == "" {
+if mac == "" || mac == "00:00:00:00:00:00" {
 http.Error(w, "bad request", http.StatusBadRequest)
 return
 }
