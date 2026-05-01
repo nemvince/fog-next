@@ -1,3 +1,16 @@
+import { Plus } from "@phosphor-icons/react";
+import { useForm } from "@tanstack/react-form";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import {
+	createColumnHelper,
+	flexRender,
+	getCoreRowModel,
+	useReactTable,
+} from "@tanstack/react-table";
+import { useState } from "react";
+import { toast } from "sonner";
+import * as z from "zod";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,19 +37,6 @@ import {
 } from "@/components/ui/table";
 import { api } from "@/lib/api";
 import type { Host, Paginated } from "@/types";
-import { Plus } from "@phosphor-icons/react";
-import { useForm } from "@tanstack/react-form";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import {
-	createColumnHelper,
-	flexRender,
-	getCoreRowModel,
-	useReactTable,
-} from "@tanstack/react-table";
-import { useState } from "react";
-import { toast } from "sonner";
-import * as z from "zod";
 
 export const Route = createFileRoute("/_auth/hosts/")({
 	component: HostsPage,
@@ -90,7 +90,8 @@ function HostsPage() {
 			setOpen(false);
 			toast.success("Host created");
 		},
-		onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to create host"),
+		onError: (err) =>
+			toast.error(err instanceof Error ? err.message : "Failed to create host"),
 	});
 
 	const form = useForm({
@@ -134,13 +135,19 @@ function HostsPage() {
 					<TableBody>
 						{isLoading ? (
 							<TableRow>
-								<TableCell colSpan={columns.length} className="text-center text-muted-foreground py-8">
+								<TableCell
+									colSpan={columns.length}
+									className="text-center text-muted-foreground py-8"
+								>
 									Loading…
 								</TableCell>
 							</TableRow>
 						) : table.getRowModel().rows.length === 0 ? (
 							<TableRow>
-								<TableCell colSpan={columns.length} className="text-center text-muted-foreground py-8">
+								<TableCell
+									colSpan={columns.length}
+									className="text-center text-muted-foreground py-8"
+								>
 									No hosts found
 								</TableCell>
 							</TableRow>
@@ -149,11 +156,19 @@ function HostsPage() {
 								<TableRow
 									key={row.id}
 									className="cursor-pointer"
-									onClick={() => navigate({ to: "/hosts/$id", params: { id: row.original.id } })}
+									onClick={() =>
+										navigate({
+											to: "/hosts/$id",
+											params: { id: row.original.id },
+										})
+									}
 								>
 									{row.getVisibleCells().map((cell) => (
 										<TableCell key={cell.id}>
-											{flexRender(cell.column.columnDef.cell, cell.getContext())}
+											{flexRender(
+												cell.column.columnDef.cell,
+												cell.getContext(),
+											)}
 										</TableCell>
 									))}
 								</TableRow>
@@ -165,7 +180,12 @@ function HostsPage() {
 
 			{data && data.total > 25 && (
 				<div className="flex items-center justify-end gap-2">
-					<Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+					<Button
+						variant="outline"
+						size="sm"
+						disabled={page <= 1}
+						onClick={() => setPage((p) => p - 1)}
+					>
 						Previous
 					</Button>
 					<span className="text-sm text-muted-foreground">
@@ -196,7 +216,8 @@ function HostsPage() {
 						<FieldGroup>
 							<form.Field name="name">
 								{(field) => {
-									const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+									const isInvalid =
+										field.state.meta.isTouched && !field.state.meta.isValid;
 									return (
 										<Field data-invalid={isInvalid}>
 											<FieldLabel htmlFor={field.name}>Name</FieldLabel>
@@ -208,14 +229,17 @@ function HostsPage() {
 												onChange={(e) => field.handleChange(e.target.value)}
 												aria-invalid={isInvalid}
 											/>
-											{isInvalid && <FieldError errors={field.state.meta.errors} />}
+											{isInvalid && (
+												<FieldError errors={field.state.meta.errors} />
+											)}
 										</Field>
 									);
 								}}
 							</form.Field>
 							<form.Field name="ip">
 								{(field) => {
-									const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+									const isInvalid =
+										field.state.meta.isTouched && !field.state.meta.isValid;
 									return (
 										<Field data-invalid={isInvalid}>
 											<FieldLabel htmlFor={field.name}>IP Address</FieldLabel>
@@ -227,7 +251,9 @@ function HostsPage() {
 												onChange={(e) => field.handleChange(e.target.value)}
 												aria-invalid={isInvalid}
 											/>
-											{isInvalid && <FieldError errors={field.state.meta.errors} />}
+											{isInvalid && (
+												<FieldError errors={field.state.meta.errors} />
+											)}
 										</Field>
 									);
 								}}
@@ -248,7 +274,11 @@ function HostsPage() {
 							</form.Field>
 						</FieldGroup>
 						<DialogFooter className="mt-4">
-							<Button type="button" variant="outline" onClick={() => setOpen(false)}>
+							<Button
+								type="button"
+								variant="outline"
+								onClick={() => setOpen(false)}
+							>
 								Cancel
 							</Button>
 							<form.Subscribe selector={(s) => s.isSubmitting}>

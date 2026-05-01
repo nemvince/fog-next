@@ -1,29 +1,30 @@
 package handlers
 
 import (
-"encoding/json"
-"fmt"
-"io"
-"log/slog"
-"net/http"
-"os"
-"path/filepath"
-"strconv"
-"strings"
-"time"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log/slog"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
 
-"github.com/go-chi/chi/v5"
-"github.com/google/uuid"
-"github.com/nemvince/fog-next/ent"
-enttask "github.com/nemvince/fog-next/ent/task"
-"github.com/nemvince/fog-next/ent/storagenode"
-"github.com/nemvince/fog-next/internal/api/middleware"
-"github.com/nemvince/fog-next/internal/api/response"
-fogauth "github.com/nemvince/fog-next/internal/auth"
-"github.com/nemvince/fog-next/internal/config"
-enthost "github.com/nemvince/fog-next/ent/host"
-"github.com/nemvince/fog-next/ent/hostmac"
-"github.com/nemvince/fog-next/ent/inventory"
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
+	"github.com/nemvince/fog-next/ent"
+	enthost "github.com/nemvince/fog-next/ent/host"
+	"github.com/nemvince/fog-next/ent/hostmac"
+	"github.com/nemvince/fog-next/ent/inventory"
+	"github.com/nemvince/fog-next/ent/storagenode"
+	enttask "github.com/nemvince/fog-next/ent/task"
+	"github.com/nemvince/fog-next/internal/api/middleware"
+	"github.com/nemvince/fog-next/internal/api/response"
+	fogauth "github.com/nemvince/fog-next/internal/auth"
+	"github.com/nemvince/fog-next/internal/config"
+	"github.com/nemvince/fog-next/internal/ws"
 )
 
 // imagePartitions is the JSONB shape stored in Image.Partitions.
@@ -38,13 +39,15 @@ FixedSizePartitions []int  `json:"fixedSizePartitions"`
 type BootAPI struct {
 cfg        *config.Config
 db         *ent.Client
+hub        *ws.Hub
 httpClient *http.Client
 }
 
-func NewBootAPI(cfg *config.Config, db *ent.Client) *BootAPI {
+func NewBootAPI(cfg *config.Config, db *ent.Client, hub *ws.Hub) *BootAPI {
 return &BootAPI{
 cfg: cfg,
 db:  db,
+hub: hub,
 httpClient: &http.Client{
 Timeout: 0, // no timeout — image streams can be large
 },
@@ -698,4 +701,88 @@ return strings.ToLower(strings.TrimSpace(mac))
 
 func isZeroMAC(mac string) bool {
 return mac == "00:00:00:00:00:00"
+}
+
+// ------------------------------------------------------------------
+// Logs — POST /fog/api/v1/boot/logs  (boot-token auth)
+// ------------------------------------------------------------------
+
+type agentLogEntry struct {
+Time  string         `json:"time"`
+Level string         `json:"level"`
+Msg   string         `json:"msg"`
+Attrs map[string]any `json:"attrs,omitempty"`
+}
+
+type logsRequest struct {
+TaskID  string          `json:"taskId"`
+Entries []agentLogEntry `json:"entries"`
+}
+
+type agentLogPayload struct {
+TaskID  string          `json:"taskId"`
+HostID  string          `json:"hostId"`
+Entries []agentLogEntry `json:"entries"`
+}
+
+func (h *BootAPI) Logs(w http.ResponseWriter, r *http.Request) {
+claims := middleware.BootClaimsFrom(r.Context())
+if claims == nil {
+response.Unauthorized(w)
+return
+}
+
+var req logsRequest
+if !response.Decode(w, r, &req) {
+return
+}
+
+taskID, err := uuid.Parse(req.TaskID)
+if err != nil || taskID != claims.TaskID {
+response.BadRequest(w, "task ID mismatch")
+return
+}
+
+if len(req.Entries) == 0 {
+response.NoContent(w)
+return
+}
+
+builders := make([]*ent.AgentLogCreate, 0, len(req.Entries))
+for _, e := range req.Entries {
+t, parseErr := time.Parse(time.RFC3339Nano, e.Time)
+if parseErr != nil {
+t = time.Now()
+}
+b := h.db.AgentLog.Create().
+SetTaskID(claims.TaskID).
+SetHostID(claims.HostID).
+SetLoggedAt(t).
+SetLevel(e.Level).
+SetMessage(e.Msg)
+if len(e.Attrs) > 0 {
+b = b.SetAttrs(e.Attrs)
+}
+builders = append(builders, b)
+}
+
+if err := h.db.AgentLog.CreateBulk(builders...).Exec(r.Context()); err != nil {
+slog.Error("agent log bulk insert failed", "task", claims.TaskID, "err", err)
+response.InternalError(w)
+return
+}
+
+if h.hub != nil {
+h.hub.Broadcast(ws.Event{
+Type: ws.EventAgentLog,
+Payload: agentLogPayload{
+TaskID:  claims.TaskID.String(),
+HostID:  claims.HostID.String(),
+Entries: req.Entries,
+},
+At: time.Now(),
+})
+}
+
+response.NoContent(w)
 }

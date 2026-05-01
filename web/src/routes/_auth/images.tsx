@@ -1,53 +1,53 @@
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-    Dialog,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
-import {
-    Field,
-    FieldError,
-    FieldGroup,
-    FieldLabel,
-} from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
-import { api } from "@/lib/api";
-import type { Image, Paginated } from "@/types";
 import { Pencil, Plus, Trash } from "@phosphor-icons/react";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
-    createColumnHelper,
-    flexRender,
-    getCoreRowModel,
-    useReactTable,
+	createColumnHelper,
+	flexRender,
+	getCoreRowModel,
+	useReactTable,
 } from "@tanstack/react-table";
 import { useState } from "react";
 import { toast } from "sonner";
 import * as z from "zod";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
+import {
+	Field,
+	FieldError,
+	FieldGroup,
+	FieldLabel,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
+import { api } from "@/lib/api";
+import type { Image, Paginated } from "@/types";
 
 export const Route = createFileRoute("/_auth/images")({
 	component: ImagesPage,
@@ -70,7 +70,11 @@ const columns = [
 	col.accessor("isEnabled", {
 		header: "Status",
 		cell: (info) =>
-			info.getValue() ? <Badge variant="default">Enabled</Badge> : <Badge variant="secondary">Disabled</Badge>,
+			info.getValue() ? (
+				<Badge variant="default">Enabled</Badge>
+			) : (
+				<Badge variant="secondary">Disabled</Badge>
+			),
 	}),
 ];
 
@@ -100,11 +104,18 @@ function ImagesPage() {
 			setOpen(false);
 			toast.success("Image created");
 		},
-		onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
+		onError: (err) =>
+			toast.error(err instanceof Error ? err.message : "Failed"),
 	});
 
 	const updateMutation = useMutation({
-		mutationFn: ({ id, values }: { id: string; values: z.infer<typeof imageSchema> }) => {
+		mutationFn: ({
+			id,
+			values,
+		}: {
+			id: string;
+			values: z.infer<typeof imageSchema>;
+		}) => {
 			return api.put<Image>(`/images/${id}`, values);
 		},
 		onSuccess: () => {
@@ -112,7 +123,8 @@ function ImagesPage() {
 			setEditTarget(null);
 			toast.success("Image updated");
 		},
-		onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
+		onError: (err) =>
+			toast.error(err instanceof Error ? err.message : "Failed"),
 	});
 
 	const deleteMutation = useMutation({
@@ -121,7 +133,8 @@ function ImagesPage() {
 			void qc.invalidateQueries({ queryKey: ["images"] });
 			toast.success("Image deleted");
 		},
-		onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
+		onError: (err) =>
+			toast.error(err instanceof Error ? err.message : "Failed"),
 	});
 
 	const form = useForm({
@@ -138,7 +151,8 @@ function ImagesPage() {
 		},
 		validators: { onSubmit: imageSchema },
 		onSubmit: ({ value }) => {
-			if (editTarget) updateMutation.mutate({ id: editTarget.id, values: value });
+			if (editTarget)
+				updateMutation.mutate({ id: editTarget.id, values: value });
 		},
 	});
 
@@ -152,7 +166,8 @@ function ImagesPage() {
 		<FieldGroup>
 			<formInstance.Field name="name">
 				{(field) => {
-					const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+					const isInvalid =
+						field.state.meta.isTouched && !field.state.meta.isValid;
 					return (
 						<Field data-invalid={isInvalid}>
 							<FieldLabel htmlFor={field.name}>Name</FieldLabel>
@@ -185,7 +200,8 @@ function ImagesPage() {
 			</formInstance.Field>
 			<formInstance.Field name="path">
 				{(field) => {
-					const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+					const isInvalid =
+						field.state.meta.isTouched && !field.state.meta.isValid;
 					return (
 						<Field data-invalid={isInvalid}>
 							<FieldLabel htmlFor={field.name}>Path</FieldLabel>
@@ -235,13 +251,19 @@ function ImagesPage() {
 					<TableBody>
 						{isLoading ? (
 							<TableRow>
-								<TableCell colSpan={columns.length + 1} className="text-center text-muted-foreground py-8">
+								<TableCell
+									colSpan={columns.length + 1}
+									className="text-center text-muted-foreground py-8"
+								>
 									Loading…
 								</TableCell>
 							</TableRow>
 						) : table.getRowModel().rows.length === 0 ? (
 							<TableRow>
-								<TableCell colSpan={columns.length + 1} className="text-center text-muted-foreground py-8">
+								<TableCell
+									colSpan={columns.length + 1}
+									className="text-center text-muted-foreground py-8"
+								>
 									No images found
 								</TableCell>
 							</TableRow>
@@ -250,7 +272,10 @@ function ImagesPage() {
 								<TableRow key={row.id}>
 									{row.getVisibleCells().map((cell) => (
 										<TableCell key={cell.id}>
-											{flexRender(cell.column.columnDef.cell, cell.getContext())}
+											{flexRender(
+												cell.column.columnDef.cell,
+												cell.getContext(),
+											)}
 										</TableCell>
 									))}
 									<TableCell className="text-right">
@@ -263,21 +288,28 @@ function ImagesPage() {
 												<Pencil />
 											</Button>
 											<AlertDialog>
-												<AlertDialogTrigger render={
-													<Button variant="ghost" size="icon-xs">
-														<Trash />
-													</Button>
-												} />
+												<AlertDialogTrigger
+													render={
+														<Button variant="ghost" size="icon-xs">
+															<Trash />
+														</Button>
+													}
+												/>
 												<AlertDialogContent>
 													<AlertDialogHeader>
 														<AlertDialogTitle>Delete image?</AlertDialogTitle>
 														<AlertDialogDescription>
-															This will permanently delete "{row.original.name}".
+															This will permanently delete "{row.original.name}
+															".
 														</AlertDialogDescription>
 													</AlertDialogHeader>
 													<AlertDialogFooter>
 														<AlertDialogCancel>Cancel</AlertDialogCancel>
-														<AlertDialogAction onClick={() => deleteMutation.mutate(row.original.id)}>
+														<AlertDialogAction
+															onClick={() =>
+																deleteMutation.mutate(row.original.id)
+															}
+														>
 															Delete
 														</AlertDialogAction>
 													</AlertDialogFooter>
@@ -294,7 +326,12 @@ function ImagesPage() {
 
 			{data && data.total > 25 && (
 				<div className="flex items-center justify-end gap-2">
-					<Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+					<Button
+						variant="outline"
+						size="sm"
+						disabled={page <= 1}
+						onClick={() => setPage((p) => p - 1)}
+					>
 						Previous
 					</Button>
 					<span className="text-sm text-muted-foreground">
@@ -325,7 +362,11 @@ function ImagesPage() {
 					>
 						<ImageFormFields formInstance={form} />
 						<DialogFooter className="mt-4">
-							<Button type="button" variant="outline" onClick={() => setOpen(false)}>
+							<Button
+								type="button"
+								variant="outline"
+								onClick={() => setOpen(false)}
+							>
 								Cancel
 							</Button>
 							<form.Subscribe selector={(s) => s.isSubmitting}>
@@ -341,7 +382,10 @@ function ImagesPage() {
 			</Dialog>
 
 			{/* Edit Dialog */}
-			<Dialog open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)}>
+			<Dialog
+				open={!!editTarget}
+				onOpenChange={(o) => !o && setEditTarget(null)}
+			>
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>Edit Image</DialogTitle>
@@ -354,7 +398,11 @@ function ImagesPage() {
 					>
 						<ImageFormFields formInstance={editForm as typeof form} />
 						<DialogFooter className="mt-4">
-							<Button type="button" variant="outline" onClick={() => setEditTarget(null)}>
+							<Button
+								type="button"
+								variant="outline"
+								onClick={() => setEditTarget(null)}
+							>
 								Cancel
 							</Button>
 							<editForm.Subscribe selector={(s) => s.isSubmitting}>

@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/nemvince/fog-next/ent/agentlog"
 	"github.com/nemvince/fog-next/ent/host"
 	"github.com/nemvince/fog-next/ent/image"
 	"github.com/nemvince/fog-next/ent/imaginglog"
@@ -332,6 +333,21 @@ func (_c *TaskCreate) SetImagingLog(v *ImagingLog) *TaskCreate {
 	return _c.SetImagingLogID(v.ID)
 }
 
+// AddAgentLogIDs adds the "agent_logs" edge to the AgentLog entity by IDs.
+func (_c *TaskCreate) AddAgentLogIDs(ids ...uuid.UUID) *TaskCreate {
+	_c.mutation.AddAgentLogIDs(ids...)
+	return _c
+}
+
+// AddAgentLogs adds the "agent_logs" edges to the AgentLog entity.
+func (_c *TaskCreate) AddAgentLogs(v ...*AgentLog) *TaskCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddAgentLogIDs(ids...)
+}
+
 // Mutation returns the TaskMutation object of the builder.
 func (_c *TaskCreate) Mutation() *TaskMutation {
 	return _c.mutation
@@ -644,6 +660,22 @@ func (_c *TaskCreate) createSpec() (*Task, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(imaginglog.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.AgentLogsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   task.AgentLogsTable,
+			Columns: []string{task.AgentLogsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentlog.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/nemvince/fog-next/ent/agentlog"
 	"github.com/nemvince/fog-next/ent/groupmember"
 	"github.com/nemvince/fog-next/ent/host"
 	"github.com/nemvince/fog-next/ent/hostmac"
@@ -364,6 +365,21 @@ func (_c *HostCreate) AddSnapinJobs(v ...*SnapinJob) *HostCreate {
 	return _c.AddSnapinJobIDs(ids...)
 }
 
+// AddAgentLogIDs adds the "agent_logs" edge to the AgentLog entity by IDs.
+func (_c *HostCreate) AddAgentLogIDs(ids ...uuid.UUID) *HostCreate {
+	_c.mutation.AddAgentLogIDs(ids...)
+	return _c
+}
+
+// AddAgentLogs adds the "agent_logs" edges to the AgentLog entity.
+func (_c *HostCreate) AddAgentLogs(v ...*AgentLog) *HostCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddAgentLogIDs(ids...)
+}
+
 // Mutation returns the HostMutation object of the builder.
 func (_c *HostCreate) Mutation() *HostMutation {
 	return _c.mutation
@@ -711,6 +727,22 @@ func (_c *HostCreate) createSpec() (*Host, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(snapinjob.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.AgentLogsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   host.AgentLogsTable,
+			Columns: []string{host.AgentLogsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentlog.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

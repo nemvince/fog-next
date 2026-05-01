@@ -963,6 +963,29 @@ func HasSnapinJobsWith(preds ...predicate.SnapinJob) predicate.Host {
 	})
 }
 
+// HasAgentLogs applies the HasEdge predicate on the "agent_logs" edge.
+func HasAgentLogs() predicate.Host {
+	return predicate.Host(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, AgentLogsTable, AgentLogsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAgentLogsWith applies the HasEdge predicate on the "agent_logs" edge with a given conditions (other predicates).
+func HasAgentLogsWith(preds ...predicate.AgentLog) predicate.Host {
+	return predicate.Host(func(s *sql.Selector) {
+		step := newAgentLogsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Host) predicate.Host {
 	return predicate.Host(sql.AndPredicates(predicates...))

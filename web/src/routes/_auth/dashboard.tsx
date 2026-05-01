@@ -1,16 +1,16 @@
+import { Cpu, HardDrive, ListChecks } from "@phosphor-icons/react";
+import { useQuery } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
 import type { Host, Image, Paginated, Task } from "@/types";
-import { Cpu, HardDrive, ListChecks } from "@phosphor-icons/react";
-import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_auth/dashboard")({
 	component: DashboardPage,
@@ -67,7 +67,9 @@ function DashboardPage() {
 		<div className="flex flex-col gap-6">
 			<div>
 				<h1 className="text-2xl font-bold">Dashboard</h1>
-				<p className="text-muted-foreground">Overview of your FOG environment</p>
+				<p className="text-muted-foreground">
+					Overview of your FOG environment
+				</p>
 			</div>
 
 			<div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

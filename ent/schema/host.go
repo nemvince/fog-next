@@ -68,5 +68,6 @@ func (Host) Edges() []ent.Edge {
 		edge.To("tasks", Task.Type),
 		edge.To("imaging_logs", ImagingLog.Type),
 		edge.To("snapin_jobs", SnapinJob.Type),
+		edge.To("agent_logs", AgentLog.Type),
 	}
 }

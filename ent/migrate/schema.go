@@ -9,6 +9,37 @@ import (
 )
 
 var (
+	// AgentLogsColumns holds the columns for the "agent_logs" table.
+	AgentLogsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID, Unique: true},
+		{Name: "logged_at", Type: field.TypeTime},
+		{Name: "level", Type: field.TypeString},
+		{Name: "message", Type: field.TypeString},
+		{Name: "attrs", Type: field.TypeJSON, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "host_id", Type: field.TypeUUID},
+		{Name: "task_id", Type: field.TypeUUID},
+	}
+	// AgentLogsTable holds the schema information for the "agent_logs" table.
+	AgentLogsTable = &schema.Table{
+		Name:       "agent_logs",
+		Columns:    AgentLogsColumns,
+		PrimaryKey: []*schema.Column{AgentLogsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "agent_logs_hosts_agent_logs",
+				Columns:    []*schema.Column{AgentLogsColumns[6]},
+				RefColumns: []*schema.Column{HostsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "agent_logs_tasks_agent_logs",
+				Columns:    []*schema.Column{AgentLogsColumns[7]},
+				RefColumns: []*schema.Column{TasksColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+	}
 	// AuditLogsColumns holds the columns for the "audit_logs" table.
 	AuditLogsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID, Unique: true},
@@ -714,6 +745,7 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		AgentLogsTable,
 		AuditLogsTable,
 		GlobalSettingsTable,
 		GroupsTable,
@@ -745,6 +777,11 @@ var (
 )
 
 func init() {
+	AgentLogsTable.ForeignKeys[0].RefTable = HostsTable
+	AgentLogsTable.ForeignKeys[1].RefTable = TasksTable
+	AgentLogsTable.Annotation = &entsql.Annotation{
+		Table: "agent_logs",
+	}
 	AuditLogsTable.ForeignKeys[0].RefTable = UsersTable
 	AuditLogsTable.Annotation = &entsql.Annotation{
 		Table: "audit_logs",

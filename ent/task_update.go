@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/nemvince/fog-next/ent/agentlog"
 	"github.com/nemvince/fog-next/ent/host"
 	"github.com/nemvince/fog-next/ent/image"
 	"github.com/nemvince/fog-next/ent/imaginglog"
@@ -374,6 +375,21 @@ func (_u *TaskUpdate) SetImagingLog(v *ImagingLog) *TaskUpdate {
 	return _u.SetImagingLogID(v.ID)
 }
 
+// AddAgentLogIDs adds the "agent_logs" edge to the AgentLog entity by IDs.
+func (_u *TaskUpdate) AddAgentLogIDs(ids ...uuid.UUID) *TaskUpdate {
+	_u.mutation.AddAgentLogIDs(ids...)
+	return _u
+}
+
+// AddAgentLogs adds the "agent_logs" edges to the AgentLog entity.
+func (_u *TaskUpdate) AddAgentLogs(v ...*AgentLog) *TaskUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAgentLogIDs(ids...)
+}
+
 // Mutation returns the TaskMutation object of the builder.
 func (_u *TaskUpdate) Mutation() *TaskMutation {
 	return _u.mutation
@@ -407,6 +423,27 @@ func (_u *TaskUpdate) ClearStorageGroup() *TaskUpdate {
 func (_u *TaskUpdate) ClearImagingLog() *TaskUpdate {
 	_u.mutation.ClearImagingLog()
 	return _u
+}
+
+// ClearAgentLogs clears all "agent_logs" edges to the AgentLog entity.
+func (_u *TaskUpdate) ClearAgentLogs() *TaskUpdate {
+	_u.mutation.ClearAgentLogs()
+	return _u
+}
+
+// RemoveAgentLogIDs removes the "agent_logs" edge to AgentLog entities by IDs.
+func (_u *TaskUpdate) RemoveAgentLogIDs(ids ...uuid.UUID) *TaskUpdate {
+	_u.mutation.RemoveAgentLogIDs(ids...)
+	return _u
+}
+
+// RemoveAgentLogs removes "agent_logs" edges to AgentLog entities.
+func (_u *TaskUpdate) RemoveAgentLogs(v ...*AgentLog) *TaskUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAgentLogIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -673,6 +710,51 @@ func (_u *TaskUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(imaginglog.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.AgentLogsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   task.AgentLogsTable,
+			Columns: []string{task.AgentLogsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentlog.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAgentLogsIDs(); len(nodes) > 0 && !_u.mutation.AgentLogsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   task.AgentLogsTable,
+			Columns: []string{task.AgentLogsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentlog.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AgentLogsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   task.AgentLogsTable,
+			Columns: []string{task.AgentLogsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentlog.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1040,6 +1122,21 @@ func (_u *TaskUpdateOne) SetImagingLog(v *ImagingLog) *TaskUpdateOne {
 	return _u.SetImagingLogID(v.ID)
 }
 
+// AddAgentLogIDs adds the "agent_logs" edge to the AgentLog entity by IDs.
+func (_u *TaskUpdateOne) AddAgentLogIDs(ids ...uuid.UUID) *TaskUpdateOne {
+	_u.mutation.AddAgentLogIDs(ids...)
+	return _u
+}
+
+// AddAgentLogs adds the "agent_logs" edges to the AgentLog entity.
+func (_u *TaskUpdateOne) AddAgentLogs(v ...*AgentLog) *TaskUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAgentLogIDs(ids...)
+}
+
 // Mutation returns the TaskMutation object of the builder.
 func (_u *TaskUpdateOne) Mutation() *TaskMutation {
 	return _u.mutation
@@ -1073,6 +1170,27 @@ func (_u *TaskUpdateOne) ClearStorageGroup() *TaskUpdateOne {
 func (_u *TaskUpdateOne) ClearImagingLog() *TaskUpdateOne {
 	_u.mutation.ClearImagingLog()
 	return _u
+}
+
+// ClearAgentLogs clears all "agent_logs" edges to the AgentLog entity.
+func (_u *TaskUpdateOne) ClearAgentLogs() *TaskUpdateOne {
+	_u.mutation.ClearAgentLogs()
+	return _u
+}
+
+// RemoveAgentLogIDs removes the "agent_logs" edge to AgentLog entities by IDs.
+func (_u *TaskUpdateOne) RemoveAgentLogIDs(ids ...uuid.UUID) *TaskUpdateOne {
+	_u.mutation.RemoveAgentLogIDs(ids...)
+	return _u
+}
+
+// RemoveAgentLogs removes "agent_logs" edges to AgentLog entities.
+func (_u *TaskUpdateOne) RemoveAgentLogs(v ...*AgentLog) *TaskUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAgentLogIDs(ids...)
 }
 
 // Where appends a list predicates to the TaskUpdate builder.
@@ -1369,6 +1487,51 @@ func (_u *TaskUpdateOne) sqlSave(ctx context.Context) (_node *Task, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(imaginglog.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.AgentLogsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   task.AgentLogsTable,
+			Columns: []string{task.AgentLogsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentlog.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAgentLogsIDs(); len(nodes) > 0 && !_u.mutation.AgentLogsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   task.AgentLogsTable,
+			Columns: []string{task.AgentLogsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentlog.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AgentLogsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   task.AgentLogsTable,
+			Columns: []string{task.AgentLogsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentlog.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

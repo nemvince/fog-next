@@ -64,6 +64,8 @@ const (
 	EdgeStorageGroup = "storage_group"
 	// EdgeImagingLog holds the string denoting the imaging_log edge name in mutations.
 	EdgeImagingLog = "imaging_log"
+	// EdgeAgentLogs holds the string denoting the agent_logs edge name in mutations.
+	EdgeAgentLogs = "agent_logs"
 	// Table holds the table name of the task in the database.
 	Table = "tasks"
 	// HostTable is the table that holds the host relation/edge.
@@ -101,6 +103,13 @@ const (
 	ImagingLogInverseTable = "imaging_logs"
 	// ImagingLogColumn is the table column denoting the imaging_log relation/edge.
 	ImagingLogColumn = "task_id"
+	// AgentLogsTable is the table that holds the agent_logs relation/edge.
+	AgentLogsTable = "agent_logs"
+	// AgentLogsInverseTable is the table name for the AgentLog entity.
+	// It exists in this package in order to avoid circular dependency with the "agentlog" package.
+	AgentLogsInverseTable = "agent_logs"
+	// AgentLogsColumn is the table column denoting the agent_logs relation/edge.
+	AgentLogsColumn = "task_id"
 )
 
 // Columns holds all SQL columns for task fields.
@@ -361,6 +370,20 @@ func ByImagingLogField(field string, opts ...sql.OrderTermOption) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newImagingLogStep(), sql.OrderByField(field, opts...))
 	}
 }
+
+// ByAgentLogsCount orders the results by agent_logs count.
+func ByAgentLogsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAgentLogsStep(), opts...)
+	}
+}
+
+// ByAgentLogs orders the results by agent_logs terms.
+func ByAgentLogs(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAgentLogsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newHostStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -394,5 +417,12 @@ func newImagingLogStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(ImagingLogInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2O, false, ImagingLogTable, ImagingLogColumn),
+	)
+}
+func newAgentLogsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AgentLogsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, AgentLogsTable, AgentLogsColumn),
 	)
 }

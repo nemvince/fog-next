@@ -1,3 +1,11 @@
+import { Plus, Trash } from "@phosphor-icons/react";
+import { useForm } from "@tanstack/react-form";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+import { toast } from "sonner";
+import * as z from "zod";
+import { AgentLogViewer } from "@/components/agent-log-viewer";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -47,13 +55,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/lib/api";
 import type { Host, HostMAC, Inventory, Task } from "@/types";
-import { Plus, Trash } from "@phosphor-icons/react";
-import { useForm } from "@tanstack/react-form";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { toast } from "sonner";
-import * as z from "zod";
 
 export const Route = createFileRoute("/_auth/hosts/$id")({
 	component: HostDetailPage,
@@ -109,7 +110,8 @@ function HostDetailPage() {
 			void qc.invalidateQueries({ queryKey: ["hosts"] });
 			toast.success("Host updated");
 		},
-		onError: (err) => toast.error(err instanceof Error ? err.message : "Update failed"),
+		onError: (err) =>
+			toast.error(err instanceof Error ? err.message : "Update failed"),
 	});
 
 	const deleteMacMutation = useMutation({
@@ -118,7 +120,8 @@ function HostDetailPage() {
 			void qc.invalidateQueries({ queryKey: ["host-macs", id] });
 			toast.success("MAC removed");
 		},
-		onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to remove MAC"),
+		onError: (err) =>
+			toast.error(err instanceof Error ? err.message : "Failed to remove MAC"),
 	});
 
 	const addMacMutation = useMutation({
@@ -129,7 +132,8 @@ function HostDetailPage() {
 			setMacOpen(false);
 			toast.success("MAC added");
 		},
-		onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to add MAC"),
+		onError: (err) =>
+			toast.error(err instanceof Error ? err.message : "Failed to add MAC"),
 	});
 
 	const host = hostQuery.data;
@@ -182,9 +186,10 @@ function HostDetailPage() {
 					<TabsTrigger value="macs">MAC Addresses</TabsTrigger>
 					<TabsTrigger value="inventory">Inventory</TabsTrigger>
 					<TabsTrigger value="tasks">Tasks</TabsTrigger>
+					<TabsTrigger value="logs">Logs</TabsTrigger>
 				</TabsList>
 
-				{/* ─── Info Tab ─────────────────────────────────────────────── */}
+				{/* ─── Info Tab ──────────────────────────────────────────────────── */}
 				<TabsContent value="info">
 					<Card>
 						<CardHeader>
@@ -199,55 +204,75 @@ function HostDetailPage() {
 								}}
 							>
 								<FieldGroup>
-									{(["name", "ip", "description", "kernel", "init", "kernelArgs"] as const).map(
-										(fieldName) => (
-											<infoForm.Field key={fieldName} name={fieldName}>
-												{(field) => {
-													const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
-													return (
-														<Field data-invalid={isInvalid}>
-															<FieldLabel htmlFor={field.name} className="capitalize">
-																{fieldName.replace(/([A-Z])/g, " $1")}
-															</FieldLabel>
-															<Input
-																id={field.name}
-																name={field.name}
-																value={field.state.value as string}
-																onBlur={field.handleBlur}
-																onChange={(e) => field.handleChange(e.target.value)}
-																aria-invalid={isInvalid}
-															/>
-															{isInvalid && <FieldError errors={field.state.meta.errors} />}
-														</Field>
-													);
-												}}
-											</infoForm.Field>
-										),
-									)}
-
-									{(["isEnabled", "useAad", "useWol"] as const).map((fieldName) => {
-										const labels: Record<string, string> = {
-											isEnabled: "Enabled",
-											useAad: "Use AAD",
-											useWol: "Use Wake-on-LAN",
-										};
-										return (
-											<infoForm.Field key={fieldName} name={fieldName}>
-												{(field) => (
-													<Field orientation="horizontal">
-														<FieldContent>
-															<FieldLabel htmlFor={field.name}>{labels[fieldName]}</FieldLabel>
-														</FieldContent>
-														<Switch
+									{(
+										[
+											"name",
+											"ip",
+											"description",
+											"kernel",
+											"init",
+											"kernelArgs",
+										] as const
+									).map((fieldName) => (
+										<infoForm.Field key={fieldName} name={fieldName}>
+											{(field) => {
+												const isInvalid =
+													field.state.meta.isTouched &&
+													!field.state.meta.isValid;
+												return (
+													<Field data-invalid={isInvalid}>
+														<FieldLabel
+															htmlFor={field.name}
+															className="capitalize"
+														>
+															{fieldName.replace(/([A-Z])/g, " $1")}
+														</FieldLabel>
+														<Input
 															id={field.name}
-															checked={field.state.value as boolean}
-															onCheckedChange={field.handleChange}
+															name={field.name}
+															value={field.state.value as string}
+															onBlur={field.handleBlur}
+															onChange={(e) =>
+																field.handleChange(e.target.value)
+															}
+															aria-invalid={isInvalid}
 														/>
+														{isInvalid && (
+															<FieldError errors={field.state.meta.errors} />
+														)}
 													</Field>
-												)}
-											</infoForm.Field>
-										);
-									})}
+												);
+											}}
+										</infoForm.Field>
+									))}
+
+									{(["isEnabled", "useAad", "useWol"] as const).map(
+										(fieldName) => {
+											const labels: Record<string, string> = {
+												isEnabled: "Enabled",
+												useAad: "Use AAD",
+												useWol: "Use Wake-on-LAN",
+											};
+											return (
+												<infoForm.Field key={fieldName} name={fieldName}>
+													{(field) => (
+														<Field orientation="horizontal">
+															<FieldContent>
+																<FieldLabel htmlFor={field.name}>
+																	{labels[fieldName]}
+																</FieldLabel>
+															</FieldContent>
+															<Switch
+																id={field.name}
+																checked={field.state.value as boolean}
+																onCheckedChange={field.handleChange}
+															/>
+														</Field>
+													)}
+												</infoForm.Field>
+											);
+										},
+									)}
 
 									<infoForm.Subscribe selector={(s) => s.isSubmitting}>
 										{(isSubmitting) => (
@@ -268,7 +293,9 @@ function HostDetailPage() {
 						<CardHeader className="flex flex-row items-center justify-between">
 							<div>
 								<CardTitle>MAC Addresses</CardTitle>
-								<CardDescription>Network interfaces for this host</CardDescription>
+								<CardDescription>
+									Network interfaces for this host
+								</CardDescription>
 							</div>
 							<Button size="sm" onClick={() => setMacOpen(true)}>
 								<Plus data-icon="inline-start" />
@@ -295,21 +322,27 @@ function HostDetailPage() {
 											</TableCell>
 											<TableCell className="text-right">
 												<AlertDialog>
-													<AlertDialogTrigger render={
-														<Button variant="ghost" size="icon-xs">
-															<Trash />
-														</Button>
-													} />
+													<AlertDialogTrigger
+														render={
+															<Button variant="ghost" size="icon-xs">
+																<Trash />
+															</Button>
+														}
+													/>
 													<AlertDialogContent>
 														<AlertDialogHeader>
-															<AlertDialogTitle>Remove MAC address?</AlertDialogTitle>
+															<AlertDialogTitle>
+																Remove MAC address?
+															</AlertDialogTitle>
 															<AlertDialogDescription>
 																This will remove {mac.mac} from this host.
 															</AlertDialogDescription>
 														</AlertDialogHeader>
 														<AlertDialogFooter>
 															<AlertDialogCancel>Cancel</AlertDialogCancel>
-															<AlertDialogAction onClick={() => deleteMacMutation.mutate(mac.id)}>
+															<AlertDialogAction
+																onClick={() => deleteMacMutation.mutate(mac.id)}
+															>
 																Remove
 															</AlertDialogAction>
 														</AlertDialogFooter>
@@ -337,10 +370,13 @@ function HostDetailPage() {
 								<FieldGroup>
 									<macForm.Field name="mac">
 										{(field) => {
-											const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+											const isInvalid =
+												field.state.meta.isTouched && !field.state.meta.isValid;
 											return (
 												<Field data-invalid={isInvalid}>
-													<FieldLabel htmlFor={field.name}>MAC Address</FieldLabel>
+													<FieldLabel htmlFor={field.name}>
+														MAC Address
+													</FieldLabel>
 													<Input
 														id={field.name}
 														name={field.name}
@@ -350,7 +386,9 @@ function HostDetailPage() {
 														aria-invalid={isInvalid}
 														placeholder="AA:BB:CC:DD:EE:FF"
 													/>
-													{isInvalid && <FieldError errors={field.state.meta.errors} />}
+													{isInvalid && (
+														<FieldError errors={field.state.meta.errors} />
+													)}
 												</Field>
 											);
 										}}
@@ -358,7 +396,9 @@ function HostDetailPage() {
 									<macForm.Field name="description">
 										{(field) => (
 											<Field>
-												<FieldLabel htmlFor={field.name}>Description</FieldLabel>
+												<FieldLabel htmlFor={field.name}>
+													Description
+												</FieldLabel>
 												<Input
 													id={field.name}
 													name={field.name}
@@ -371,7 +411,11 @@ function HostDetailPage() {
 									</macForm.Field>
 								</FieldGroup>
 								<DialogFooter className="mt-4">
-									<Button type="button" variant="outline" onClick={() => setMacOpen(false)}>
+									<Button
+										type="button"
+										variant="outline"
+										onClick={() => setMacOpen(false)}
+									>
 										Cancel
 									</Button>
 									<macForm.Subscribe selector={(s) => s.isSubmitting}>
@@ -398,24 +442,36 @@ function HostDetailPage() {
 							{inventoryQuery.isLoading ? (
 								<div className="flex flex-col gap-2">
 									{Array.from({ length: 6 }).map((_, i) => (
+										// biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders are stable, index key is acceptable
 										<Skeleton key={i} className="h-5 w-full" />
 									))}
 								</div>
 							) : !inventoryQuery.data ? (
-								<p className="text-muted-foreground">No inventory data available</p>
+								<p className="text-muted-foreground">
+									No inventory data available
+								</p>
 							) : (
 								<div className="flex flex-col gap-3">
 									{(
 										[
-											["CPU", `${inventoryQuery.data.cpuModel} (${inventoryQuery.data.cpuCores} cores @ ${inventoryQuery.data.cpuFreqMhz} MHz)`],
+											[
+												"CPU",
+												`${inventoryQuery.data.cpuModel} (${inventoryQuery.data.cpuCores} cores @ ${inventoryQuery.data.cpuFreqMhz} MHz)`,
+											],
 											["RAM", `${inventoryQuery.data.ramMib} MiB`],
-											["Disk", `${inventoryQuery.data.hdModel} (${inventoryQuery.data.hdSizeGb} GB)`],
+											[
+												"Disk",
+												`${inventoryQuery.data.hdModel} (${inventoryQuery.data.hdSizeGb} GB)`,
+											],
 											["Manufacturer", inventoryQuery.data.manufacturer],
 											["Product", inventoryQuery.data.product],
 											["Serial", inventoryQuery.data.serial],
 											["UUID", inventoryQuery.data.uuid],
 											["BIOS", inventoryQuery.data.biosVersion],
-											["OS", `${inventoryQuery.data.osName} ${inventoryQuery.data.osVersion}`],
+											[
+												"OS",
+												`${inventoryQuery.data.osName} ${inventoryQuery.data.osVersion}`,
+											],
 										] as [string, string][]
 									).map(([label, value]) => (
 										<div key={label}>
@@ -453,6 +509,30 @@ function HostDetailPage() {
 										Progress: {taskQuery.data.percentComplete}%
 									</div>
 								</div>
+							)}
+						</CardContent>
+					</Card>
+				</TabsContent>
+
+				{/* ─── Logs Tab ─────────────────────────────────────────────── */}
+				<TabsContent value="logs">
+					<Card>
+						<CardHeader>
+							<CardTitle>Agent Logs</CardTitle>
+							<CardDescription>
+								Live log output forwarded from fos-agent during imaging tasks
+							</CardDescription>
+						</CardHeader>
+						<CardContent>
+							{taskQuery.isLoading ? (
+								<p className="text-muted-foreground text-sm">Loading task…</p>
+							) : !taskQuery.data ? (
+								<p className="text-muted-foreground text-sm">
+									No active task. Logs appear here when an imaging task is
+									running.
+								</p>
+							) : (
+								<AgentLogViewer taskId={taskQuery.data.id} />
 							)}
 						</CardContent>
 					</Card>

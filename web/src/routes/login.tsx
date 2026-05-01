@@ -1,3 +1,7 @@
+import { useForm } from "@tanstack/react-form";
+import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
+import { toast } from "sonner";
+import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -17,10 +21,6 @@ import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/store/auth";
 import type { TokenPair } from "@/types";
-import { useForm } from "@tanstack/react-form";
-import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
-import { toast } from "sonner";
-import * as z from "zod";
 
 export const Route = createFileRoute("/login")({
 	beforeLoad: () => {
@@ -121,7 +121,11 @@ function LoginPage() {
 
 							<form.Subscribe selector={(s) => s.isSubmitting}>
 								{(isSubmitting) => (
-									<Button type="submit" className="w-full" disabled={isSubmitting}>
+									<Button
+										type="submit"
+										className="w-full"
+										disabled={isSubmitting}
+									>
 										{isSubmitting ? "Signing in…" : "Sign in"}
 									</Button>
 								)}

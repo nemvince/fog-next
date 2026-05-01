@@ -1,3 +1,10 @@
+import { Copy, Pencil, Plus, Trash } from "@phosphor-icons/react";
+import { useForm } from "@tanstack/react-form";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+import { toast } from "sonner";
+import * as z from "zod";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -37,13 +44,6 @@ import {
 } from "@/components/ui/table";
 import { api } from "@/lib/api";
 import type { Paginated, User } from "@/types";
-import { Copy, Pencil, Plus, Trash } from "@phosphor-icons/react";
-import { useForm } from "@tanstack/react-form";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { toast } from "sonner";
-import * as z from "zod";
 
 export const Route = createFileRoute("/_auth/users")({
 	component: UsersPage,
@@ -73,17 +73,25 @@ function UsersPage() {
 	});
 
 	const createMutation = useMutation({
-		mutationFn: (values: z.infer<typeof createSchema>) => api.post<User>("/users", values),
+		mutationFn: (values: z.infer<typeof createSchema>) =>
+			api.post<User>("/users", values),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: ["users"] });
 			setCreateOpen(false);
 			toast.success("User created");
 		},
-		onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
+		onError: (err) =>
+			toast.error(err instanceof Error ? err.message : "Failed"),
 	});
 
 	const updateMutation = useMutation({
-		mutationFn: ({ id, values }: { id: string; values: z.infer<typeof editSchema> }) => {
+		mutationFn: ({
+			id,
+			values,
+		}: {
+			id: string;
+			values: z.infer<typeof editSchema>;
+		}) => {
 			const body: Record<string, unknown> = {
 				username: values.username,
 				role: values.role,
@@ -96,7 +104,8 @@ function UsersPage() {
 			setEditTarget(null);
 			toast.success("User updated");
 		},
-		onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
+		onError: (err) =>
+			toast.error(err instanceof Error ? err.message : "Failed"),
 	});
 
 	const deleteMutation = useMutation({
@@ -105,17 +114,24 @@ function UsersPage() {
 			void qc.invalidateQueries({ queryKey: ["users"] });
 			toast.success("User deleted");
 		},
-		onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
+		onError: (err) =>
+			toast.error(err instanceof Error ? err.message : "Failed"),
 	});
 
 	const regenTokenMutation = useMutation({
-		mutationFn: (id: string) => api.post<{ token: string }>(`/users/${id}/token`, {}),
+		mutationFn: (id: string) =>
+			api.post<{ token: string }>(`/users/${id}/token`, {}),
 		onSuccess: (res) => setApiToken(res.token),
-		onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
+		onError: (err) =>
+			toast.error(err instanceof Error ? err.message : "Failed"),
 	});
 
 	const createForm = useForm({
-		defaultValues: { username: "", password: "", role: "readonly" as "admin" | "readonly" },
+		defaultValues: {
+			username: "",
+			password: "",
+			role: "readonly" as "admin" | "readonly",
+		},
 		validators: { onSubmit: createSchema },
 		onSubmit: ({ value }) => createMutation.mutate(value),
 	});
@@ -128,7 +144,8 @@ function UsersPage() {
 		},
 		validators: { onSubmit: editSchema },
 		onSubmit: ({ value }) => {
-			if (editTarget) updateMutation.mutate({ id: editTarget.id, values: value });
+			if (editTarget)
+				updateMutation.mutate({ id: editTarget.id, values: value });
 		},
 	});
 
@@ -145,7 +162,8 @@ function UsersPage() {
 			<FieldGroup>
 				<formInstance.Field name="username">
 					{(field) => {
-						const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+						const isInvalid =
+							field.state.meta.isTouched && !field.state.meta.isValid;
 						return (
 							<Field data-invalid={isInvalid}>
 								<FieldLabel htmlFor={field.name}>Username</FieldLabel>
@@ -164,7 +182,8 @@ function UsersPage() {
 				</formInstance.Field>
 				<formInstance.Field name="password">
 					{(field) => {
-						const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+						const isInvalid =
+							field.state.meta.isTouched && !field.state.meta.isValid;
 						return (
 							<Field data-invalid={isInvalid}>
 								<FieldLabel htmlFor={field.name}>
@@ -190,7 +209,9 @@ function UsersPage() {
 							<FieldLabel>Role</FieldLabel>
 							<RadioGroup
 								value={field.state.value}
-								onValueChange={(v) => field.handleChange(v as "admin" | "readonly")}
+								onValueChange={(v) =>
+									field.handleChange(v as "admin" | "readonly")
+								}
 							>
 								<div className="flex items-center gap-2">
 									<RadioGroupItem value="admin" id="role-admin" />
@@ -234,23 +255,37 @@ function UsersPage() {
 					<TableBody>
 						{isLoading ? (
 							<TableRow>
-								<TableCell colSpan={4} className="text-center text-muted-foreground py-8">Loading…</TableCell>
+								<TableCell
+									colSpan={4}
+									className="text-center text-muted-foreground py-8"
+								>
+									Loading…
+								</TableCell>
 							</TableRow>
 						) : users.length === 0 ? (
 							<TableRow>
-								<TableCell colSpan={4} className="text-center text-muted-foreground py-8">No users</TableCell>
+								<TableCell
+									colSpan={4}
+									className="text-center text-muted-foreground py-8"
+								>
+									No users
+								</TableCell>
 							</TableRow>
 						) : (
 							users.map((user) => (
 								<TableRow key={user.id}>
 									<TableCell className="font-medium">{user.username}</TableCell>
 									<TableCell>
-										<Badge variant={user.role === "admin" ? "default" : "secondary"}>
+										<Badge
+											variant={user.role === "admin" ? "default" : "secondary"}
+										>
 											{user.role}
 										</Badge>
 									</TableCell>
 									<TableCell className="text-muted-foreground text-sm">
-										{user.lastLogin ? new Date(user.lastLogin).toLocaleString() : "Never"}
+										{user.lastLogin
+											? new Date(user.lastLogin).toLocaleString()
+											: "Never"}
 									</TableCell>
 									<TableCell className="text-right">
 										<div className="flex justify-end gap-1">
@@ -262,15 +297,21 @@ function UsersPage() {
 											>
 												<Copy />
 											</Button>
-											<Button variant="ghost" size="icon-xs" onClick={() => setEditTarget(user)}>
+											<Button
+												variant="ghost"
+												size="icon-xs"
+												onClick={() => setEditTarget(user)}
+											>
 												<Pencil />
 											</Button>
 											<AlertDialog>
-												<AlertDialogTrigger render={
-													<Button variant="ghost" size="icon-xs">
-														<Trash />
-													</Button>
-												} />
+												<AlertDialogTrigger
+													render={
+														<Button variant="ghost" size="icon-xs">
+															<Trash />
+														</Button>
+													}
+												/>
 												<AlertDialogContent>
 													<AlertDialogHeader>
 														<AlertDialogTitle>Delete user?</AlertDialogTitle>
@@ -280,7 +321,9 @@ function UsersPage() {
 													</AlertDialogHeader>
 													<AlertDialogFooter>
 														<AlertDialogCancel>Cancel</AlertDialogCancel>
-														<AlertDialogAction onClick={() => deleteMutation.mutate(user.id)}>
+														<AlertDialogAction
+															onClick={() => deleteMutation.mutate(user.id)}
+														>
 															Delete
 														</AlertDialogAction>
 													</AlertDialogFooter>
@@ -309,7 +352,13 @@ function UsersPage() {
 					>
 						<UserFormFields formInstance={createForm} isCreate />
 						<DialogFooter className="mt-4">
-							<Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+							<Button
+								type="button"
+								variant="outline"
+								onClick={() => setCreateOpen(false)}
+							>
+								Cancel
+							</Button>
 							<createForm.Subscribe selector={(s) => s.isSubmitting}>
 								{(isSubmitting) => (
 									<Button type="submit" disabled={isSubmitting}>
@@ -323,7 +372,10 @@ function UsersPage() {
 			</Dialog>
 
 			{/* Edit Dialog */}
-			<Dialog open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)}>
+			<Dialog
+				open={!!editTarget}
+				onOpenChange={(o) => !o && setEditTarget(null)}
+			>
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>Edit User</DialogTitle>
@@ -334,9 +386,18 @@ function UsersPage() {
 							void editForm.handleSubmit();
 						}}
 					>
-						<UserFormFields formInstance={editForm as unknown as typeof createForm} isCreate={false} />
+						<UserFormFields
+							formInstance={editForm as unknown as typeof createForm}
+							isCreate={false}
+						/>
 						<DialogFooter className="mt-4">
-							<Button type="button" variant="outline" onClick={() => setEditTarget(null)}>Cancel</Button>
+							<Button
+								type="button"
+								variant="outline"
+								onClick={() => setEditTarget(null)}
+							>
+								Cancel
+							</Button>
 							<editForm.Subscribe selector={(s) => s.isSubmitting}>
 								{(isSubmitting) => (
 									<Button type="submit" disabled={isSubmitting}>

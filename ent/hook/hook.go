@@ -9,6 +9,18 @@ import (
 	"github.com/nemvince/fog-next/ent"
 )
 
+// The AgentLogFunc type is an adapter to allow the use of ordinary
+// function as AgentLog mutator.
+type AgentLogFunc func(context.Context, *ent.AgentLogMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AgentLogFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.AgentLogMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AgentLogMutation", m)
+}
+
 // The AuditLogFunc type is an adapter to allow the use of ordinary
 // function as AuditLog mutator.
 type AuditLogFunc func(context.Context, *ent.AuditLogMutation) (ent.Value, error)

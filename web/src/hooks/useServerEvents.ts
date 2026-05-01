@@ -1,7 +1,8 @@
-import { ensureFreshToken } from "@/lib/api";
-import { useAuthStore } from "@/store/auth";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
+import { ensureFreshToken } from "@/lib/api";
+import { useAuthStore } from "@/store/auth";
+import type { AgentLogEvent } from "@/types";
 
 interface WSEvent {
 	type: string;
@@ -16,6 +17,7 @@ export function useServerEvents() {
 	// Re-run the effect whenever the access token changes (e.g. after a refresh).
 	const accessToken = useAuthStore((s) => s.accessToken);
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: accessToken is used to reconnect on token change
 	useEffect(() => {
 		let stopped = false;
 
@@ -39,6 +41,11 @@ export function useServerEvents() {
 						void qc.invalidateQueries({ queryKey: ["tasks"] });
 					} else if (evt.type.startsWith("host.")) {
 						void qc.invalidateQueries({ queryKey: ["hosts"] });
+					} else if (evt.type === "agent.log") {
+						const payload = evt.payload as AgentLogEvent;
+						void qc.invalidateQueries({
+							queryKey: ["task-logs", payload.taskId],
+						});
 					}
 				} catch {
 					// ignore parse errors

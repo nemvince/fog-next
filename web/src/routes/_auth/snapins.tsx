@@ -1,3 +1,10 @@
+import { Pencil, Plus, Trash, Upload } from "@phosphor-icons/react";
+import { useForm } from "@tanstack/react-form";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { useRef, useState } from "react";
+import { toast } from "sonner";
+import * as z from "zod";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -35,13 +42,6 @@ import {
 } from "@/components/ui/table";
 import { api } from "@/lib/api";
 import type { Paginated, Snapin } from "@/types";
-import { Pencil, Plus, Trash, Upload } from "@phosphor-icons/react";
-import { useForm } from "@tanstack/react-form";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import { useRef, useState } from "react";
-import { toast } from "sonner";
-import * as z from "zod";
 
 export const Route = createFileRoute("/_auth/snapins")({
 	component: SnapinsPage,
@@ -67,24 +67,32 @@ function SnapinsPage() {
 	});
 
 	const createMutation = useMutation({
-		mutationFn: (values: z.infer<typeof snapinSchema>) => api.post<Snapin>("/snapins", values),
+		mutationFn: (values: z.infer<typeof snapinSchema>) =>
+			api.post<Snapin>("/snapins", values),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: ["snapins"] });
 			setCreateOpen(false);
 			toast.success("Snapin created");
 		},
-		onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
+		onError: (err) =>
+			toast.error(err instanceof Error ? err.message : "Failed"),
 	});
 
 	const updateMutation = useMutation({
-		mutationFn: ({ id, values }: { id: string; values: z.infer<typeof snapinSchema> }) =>
-			api.put<Snapin>(`/snapins/${id}`, values),
+		mutationFn: ({
+			id,
+			values,
+		}: {
+			id: string;
+			values: z.infer<typeof snapinSchema>;
+		}) => api.put<Snapin>(`/snapins/${id}`, values),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: ["snapins"] });
 			setEditTarget(null);
 			toast.success("Snapin updated");
 		},
-		onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
+		onError: (err) =>
+			toast.error(err instanceof Error ? err.message : "Failed"),
 	});
 
 	const deleteMutation = useMutation({
@@ -93,7 +101,8 @@ function SnapinsPage() {
 			void qc.invalidateQueries({ queryKey: ["snapins"] });
 			toast.success("Snapin deleted");
 		},
-		onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
+		onError: (err) =>
+			toast.error(err instanceof Error ? err.message : "Failed"),
 	});
 
 	const uploadMutation = useMutation({
@@ -107,7 +116,8 @@ function SnapinsPage() {
 			setUploadTarget(null);
 			toast.success("File uploaded");
 		},
-		onError: (err) => toast.error(err instanceof Error ? err.message : "Upload failed"),
+		onError: (err) =>
+			toast.error(err instanceof Error ? err.message : "Upload failed"),
 	});
 
 	const form = useForm({
@@ -125,7 +135,8 @@ function SnapinsPage() {
 		},
 		validators: { onSubmit: snapinSchema },
 		onSubmit: ({ value }) => {
-			if (editTarget) updateMutation.mutate({ id: editTarget.id, values: value });
+			if (editTarget)
+				updateMutation.mutate({ id: editTarget.id, values: value });
 		},
 	});
 
@@ -142,7 +153,8 @@ function SnapinsPage() {
 			<FieldGroup>
 				<formInstance.Field name="name">
 					{(field) => {
-						const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+						const isInvalid =
+							field.state.meta.isTouched && !field.state.meta.isValid;
 						return (
 							<Field data-invalid={isInvalid}>
 								<FieldLabel htmlFor={field.name}>Name</FieldLabel>
@@ -212,7 +224,9 @@ function SnapinsPage() {
 			<div className="flex items-center justify-between">
 				<div>
 					<h1 className="text-2xl font-bold">Snapins</h1>
-					<p className="text-muted-foreground">Scripts and files deployed to hosts</p>
+					<p className="text-muted-foreground">
+						Scripts and files deployed to hosts
+					</p>
 				</div>
 				<Button onClick={() => setCreateOpen(true)}>
 					<Plus data-icon="inline-start" />
@@ -235,11 +249,21 @@ function SnapinsPage() {
 					<TableBody>
 						{isLoading ? (
 							<TableRow>
-								<TableCell colSpan={6} className="text-center text-muted-foreground py-8">Loading…</TableCell>
+								<TableCell
+									colSpan={6}
+									className="text-center text-muted-foreground py-8"
+								>
+									Loading…
+								</TableCell>
 							</TableRow>
 						) : snapins.length === 0 ? (
 							<TableRow>
-								<TableCell colSpan={6} className="text-center text-muted-foreground py-8">No snapins</TableCell>
+								<TableCell
+									colSpan={6}
+									className="text-center text-muted-foreground py-8"
+								>
+									No snapins
+								</TableCell>
 							</TableRow>
 						) : (
 							snapins.map((snapin) => (
@@ -252,7 +276,9 @@ function SnapinsPage() {
 										{snapin.fileName ? (
 											<Badge variant="secondary">{snapin.fileName}</Badge>
 										) : (
-											<span className="text-muted-foreground text-xs">No file</span>
+											<span className="text-muted-foreground text-xs">
+												No file
+											</span>
 										)}
 									</TableCell>
 									<TableCell className="text-right">
@@ -268,15 +294,21 @@ function SnapinsPage() {
 											>
 												<Upload />
 											</Button>
-											<Button variant="ghost" size="icon-xs" onClick={() => setEditTarget(snapin)}>
+											<Button
+												variant="ghost"
+												size="icon-xs"
+												onClick={() => setEditTarget(snapin)}
+											>
 												<Pencil />
 											</Button>
 											<AlertDialog>
-												<AlertDialogTrigger render={
-													<Button variant="ghost" size="icon-xs">
-														<Trash />
-													</Button>
-												} />
+												<AlertDialogTrigger
+													render={
+														<Button variant="ghost" size="icon-xs">
+															<Trash />
+														</Button>
+													}
+												/>
 												<AlertDialogContent>
 													<AlertDialogHeader>
 														<AlertDialogTitle>Delete snapin?</AlertDialogTitle>
@@ -286,7 +318,9 @@ function SnapinsPage() {
 													</AlertDialogHeader>
 													<AlertDialogFooter>
 														<AlertDialogCancel>Cancel</AlertDialogCancel>
-														<AlertDialogAction onClick={() => deleteMutation.mutate(snapin.id)}>
+														<AlertDialogAction
+															onClick={() => deleteMutation.mutate(snapin.id)}
+														>
 															Delete
 														</AlertDialogAction>
 													</AlertDialogFooter>
@@ -323,7 +357,11 @@ function SnapinsPage() {
 					>
 						<SnapinFormFields formInstance={form} />
 						<DialogFooter className="mt-4">
-							<Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
+							<Button
+								type="button"
+								variant="outline"
+								onClick={() => setCreateOpen(false)}
+							>
 								Cancel
 							</Button>
 							<form.Subscribe selector={(s) => s.isSubmitting}>
@@ -339,7 +377,10 @@ function SnapinsPage() {
 			</Dialog>
 
 			{/* Edit Dialog */}
-			<Dialog open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)}>
+			<Dialog
+				open={!!editTarget}
+				onOpenChange={(o) => !o && setEditTarget(null)}
+			>
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>Edit Snapin</DialogTitle>
@@ -352,7 +393,11 @@ function SnapinsPage() {
 					>
 						<SnapinFormFields formInstance={editForm as typeof form} />
 						<DialogFooter className="mt-4">
-							<Button type="button" variant="outline" onClick={() => setEditTarget(null)}>
+							<Button
+								type="button"
+								variant="outline"
+								onClick={() => setEditTarget(null)}
+							>
 								Cancel
 							</Button>
 							<editForm.Subscribe selector={(s) => s.isSubmitting}>

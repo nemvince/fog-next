@@ -1,3 +1,10 @@
+import { Plus, Trash } from "@phosphor-icons/react";
+import { useForm } from "@tanstack/react-form";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+import { toast } from "sonner";
+import * as z from "zod";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -48,13 +55,6 @@ import {
 } from "@/components/ui/table";
 import { api } from "@/lib/api";
 import type { Group, GroupMember, Host, Paginated } from "@/types";
-import { Plus, Trash } from "@phosphor-icons/react";
-import { useForm } from "@tanstack/react-form";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { toast } from "sonner";
-import * as z from "zod";
 
 export const Route = createFileRoute("/_auth/groups")({
 	component: GroupsPage,
@@ -79,7 +79,9 @@ function GroupsPage() {
 
 	const membersQuery = useQuery({
 		queryKey: ["group-members", selectedGroup?.id],
-		queryFn: () => api.get<{ data: GroupMember[] }>(`/groups/${selectedGroup!.id}/members`),
+		queryFn: () =>
+			// biome-ignore lint/style/noNonNullAssertion: enabled only when selectedGroup is set
+			api.get<{ data: GroupMember[] }>(`/groups/${selectedGroup!.id}/members`),
 		enabled: !!selectedGroup,
 	});
 
@@ -89,13 +91,15 @@ function GroupsPage() {
 	});
 
 	const createMutation = useMutation({
-		mutationFn: (values: z.infer<typeof groupSchema>) => api.post<Group>("/groups", values),
+		mutationFn: (values: z.infer<typeof groupSchema>) =>
+			api.post<Group>("/groups", values),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: ["groups"] });
 			setCreateOpen(false);
 			toast.success("Group created");
 		},
-		onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
+		onError: (err) =>
+			toast.error(err instanceof Error ? err.message : "Failed"),
 	});
 
 	const deleteMutation = useMutation({
@@ -105,28 +109,38 @@ function GroupsPage() {
 			if (selectedGroup?.id === id) setSelectedGroup(null);
 			toast.success("Group deleted");
 		},
-		onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
+		onError: (err) =>
+			toast.error(err instanceof Error ? err.message : "Failed"),
 	});
 
 	const addMemberMutation = useMutation({
 		mutationFn: (hostId: string) =>
+			// biome-ignore lint/style/noNonNullAssertion: mutates only when selectedGroup is set
 			api.post<void>(`/groups/${selectedGroup!.id}/members`, { hostId }),
 		onSuccess: () => {
-			void qc.invalidateQueries({ queryKey: ["group-members", selectedGroup?.id] });
+			void qc.invalidateQueries({
+				queryKey: ["group-members", selectedGroup?.id],
+			});
 			setAddMemberOpen(false);
 			setAddMemberHostId("");
 			toast.success("Member added");
 		},
-		onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
+		onError: (err) =>
+			toast.error(err instanceof Error ? err.message : "Failed"),
 	});
 
 	const removeMemberMutation = useMutation({
-		mutationFn: (hostId: string) => api.del<void>(`/groups/${selectedGroup!.id}/members/${hostId}`),
+		mutationFn: (hostId: string) =>
+			// biome-ignore lint/style/noNonNullAssertion: mutates only when selectedGroup is set
+			api.del<void>(`/groups/${selectedGroup!.id}/members/${hostId}`),
 		onSuccess: () => {
-			void qc.invalidateQueries({ queryKey: ["group-members", selectedGroup?.id] });
+			void qc.invalidateQueries({
+				queryKey: ["group-members", selectedGroup?.id],
+			});
 			toast.success("Member removed");
 		},
-		onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
+		onError: (err) =>
+			toast.error(err instanceof Error ? err.message : "Failed"),
 	});
 
 	const form = useForm({
@@ -164,7 +178,9 @@ function GroupsPage() {
 					</CardHeader>
 					<CardContent className="p-0">
 						{groups.length === 0 ? (
-							<p className="px-4 py-6 text-sm text-muted-foreground">No groups</p>
+							<p className="px-4 py-6 text-sm text-muted-foreground">
+								No groups
+							</p>
 						) : (
 							<Table>
 								<TableBody>
@@ -178,20 +194,24 @@ function GroupsPage() {
 											<TableCell>
 												<div className="font-medium">{group.name}</div>
 												{group.description && (
-													<div className="text-xs text-muted-foreground">{group.description}</div>
+													<div className="text-xs text-muted-foreground">
+														{group.description}
+													</div>
 												)}
 											</TableCell>
 											<TableCell className="text-right">
 												<AlertDialog>
-													<AlertDialogTrigger render={
-														<Button
-															variant="ghost"
-															size="icon-xs"
-															onClick={(e) => e.stopPropagation()}
-														>
-															<Trash />
-														</Button>
-													} />
+													<AlertDialogTrigger
+														render={
+															<Button
+																variant="ghost"
+																size="icon-xs"
+																onClick={(e) => e.stopPropagation()}
+															>
+																<Trash />
+															</Button>
+														}
+													/>
 													<AlertDialogContent>
 														<AlertDialogHeader>
 															<AlertDialogTitle>Delete group?</AlertDialogTitle>
@@ -201,7 +221,9 @@ function GroupsPage() {
 														</AlertDialogHeader>
 														<AlertDialogFooter>
 															<AlertDialogCancel>Cancel</AlertDialogCancel>
-															<AlertDialogAction onClick={() => deleteMutation.mutate(group.id)}>
+															<AlertDialogAction
+																onClick={() => deleteMutation.mutate(group.id)}
+															>
 																Delete
 															</AlertDialogAction>
 														</AlertDialogFooter>
@@ -220,9 +242,13 @@ function GroupsPage() {
 				<Card className="md:col-span-2">
 					<CardHeader className="flex flex-row items-center justify-between">
 						<div>
-							<CardTitle>{selectedGroup ? selectedGroup.name : "Members"}</CardTitle>
+							<CardTitle>
+								{selectedGroup ? selectedGroup.name : "Members"}
+							</CardTitle>
 							<CardDescription>
-								{selectedGroup ? "Hosts in this group" : "Select a group to view members"}
+								{selectedGroup
+									? "Hosts in this group"
+									: "Select a group to view members"}
 							</CardDescription>
 						</div>
 						{selectedGroup && (
@@ -255,7 +281,9 @@ function GroupsPage() {
 													<Button
 														variant="ghost"
 														size="icon-xs"
-														onClick={() => removeMemberMutation.mutate(member.hostId)}
+														onClick={() =>
+															removeMemberMutation.mutate(member.hostId)
+														}
 													>
 														<Trash />
 													</Button>
@@ -285,7 +313,8 @@ function GroupsPage() {
 						<FieldGroup>
 							<form.Field name="name">
 								{(field) => {
-									const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+									const isInvalid =
+										field.state.meta.isTouched && !field.state.meta.isValid;
 									return (
 										<Field data-invalid={isInvalid}>
 											<FieldLabel htmlFor={field.name}>Name</FieldLabel>
@@ -297,7 +326,9 @@ function GroupsPage() {
 												onChange={(e) => field.handleChange(e.target.value)}
 												aria-invalid={isInvalid}
 											/>
-											{isInvalid && <FieldError errors={field.state.meta.errors} />}
+											{isInvalid && (
+												<FieldError errors={field.state.meta.errors} />
+											)}
 										</Field>
 									);
 								}}
@@ -318,7 +349,11 @@ function GroupsPage() {
 							</form.Field>
 						</FieldGroup>
 						<DialogFooter className="mt-4">
-							<Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
+							<Button
+								type="button"
+								variant="outline"
+								onClick={() => setCreateOpen(false)}
+							>
 								Cancel
 							</Button>
 							<form.Subscribe selector={(s) => s.isSubmitting}>
@@ -342,25 +377,36 @@ function GroupsPage() {
 					<div className="flex flex-col gap-4">
 						<Field>
 							<FieldLabel>Host</FieldLabel>
-							<Select value={addMemberHostId} onValueChange={setAddMemberHostId}>
+							<Select
+								value={addMemberHostId}
+								onValueChange={setAddMemberHostId}
+							>
 								<SelectTrigger>
 									<SelectValue placeholder="Select host" />
 								</SelectTrigger>
 								<SelectContent>
 									{availableHosts.map((h) => (
-										<SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>
+										<SelectItem key={h.id} value={h.id}>
+											{h.name}
+										</SelectItem>
 									))}
 								</SelectContent>
 							</Select>
 						</Field>
 					</div>
 					<DialogFooter>
-						<Button type="button" variant="outline" onClick={() => setAddMemberOpen(false)}>
+						<Button
+							type="button"
+							variant="outline"
+							onClick={() => setAddMemberOpen(false)}
+						>
 							Cancel
 						</Button>
 						<Button
 							disabled={!addMemberHostId || addMemberMutation.isPending}
-							onClick={() => addMemberHostId && addMemberMutation.mutate(addMemberHostId)}
+							onClick={() =>
+								addMemberHostId && addMemberMutation.mutate(addMemberHostId)
+							}
 						>
 							{addMemberMutation.isPending ? "Adding…" : "Add"}
 						</Button>

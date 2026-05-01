@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/nemvince/fog-next/ent/agentlog"
 	"github.com/nemvince/fog-next/ent/auditlog"
 	"github.com/nemvince/fog-next/ent/globalsetting"
 	"github.com/nemvince/fog-next/ent/group"
@@ -40,6 +41,16 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	agentlogFields := schema.AgentLog{}.Fields()
+	_ = agentlogFields
+	// agentlogDescCreatedAt is the schema descriptor for created_at field.
+	agentlogDescCreatedAt := agentlogFields[7].Descriptor()
+	// agentlog.DefaultCreatedAt holds the default value on creation for the created_at field.
+	agentlog.DefaultCreatedAt = agentlogDescCreatedAt.Default.(func() time.Time)
+	// agentlogDescID is the schema descriptor for id field.
+	agentlogDescID := agentlogFields[0].Descriptor()
+	// agentlog.DefaultID holds the default value on creation for the id field.
+	agentlog.DefaultID = agentlogDescID.Default.(func() uuid.UUID)
 	auditlogFields := schema.AuditLog{}.Fields()
 	_ = auditlogFields
 	// auditlogDescUsername is the schema descriptor for username field.

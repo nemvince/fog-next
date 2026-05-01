@@ -61,6 +61,8 @@ const (
 	EdgeImagingLogs = "imaging_logs"
 	// EdgeSnapinJobs holds the string denoting the snapin_jobs edge name in mutations.
 	EdgeSnapinJobs = "snapin_jobs"
+	// EdgeAgentLogs holds the string denoting the agent_logs edge name in mutations.
+	EdgeAgentLogs = "agent_logs"
 	// Table holds the table name of the host in the database.
 	Table = "hosts"
 	// ImageTable is the table that holds the image relation/edge.
@@ -126,6 +128,13 @@ const (
 	SnapinJobsInverseTable = "snapin_jobs"
 	// SnapinJobsColumn is the table column denoting the snapin_jobs relation/edge.
 	SnapinJobsColumn = "host_id"
+	// AgentLogsTable is the table that holds the agent_logs relation/edge.
+	AgentLogsTable = "agent_logs"
+	// AgentLogsInverseTable is the table name for the AgentLog entity.
+	// It exists in this package in order to avoid circular dependency with the "agentlog" package.
+	AgentLogsInverseTable = "agent_logs"
+	// AgentLogsColumn is the table column denoting the agent_logs relation/edge.
+	AgentLogsColumn = "host_id"
 )
 
 // Columns holds all SQL columns for host fields.
@@ -375,6 +384,20 @@ func BySnapinJobs(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newSnapinJobsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByAgentLogsCount orders the results by agent_logs count.
+func ByAgentLogsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAgentLogsStep(), opts...)
+	}
+}
+
+// ByAgentLogs orders the results by agent_logs terms.
+func ByAgentLogs(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAgentLogsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newImageStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -436,5 +459,12 @@ func newSnapinJobsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(SnapinJobsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, SnapinJobsTable, SnapinJobsColumn),
+	)
+}
+func newAgentLogsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AgentLogsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, AgentLogsTable, AgentLogsColumn),
 	)
 }

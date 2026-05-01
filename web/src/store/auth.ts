@@ -34,7 +34,12 @@ export const useAuthStore = create<AuthState>()(
 			},
 
 			logout: () => {
-				set({ accessToken: null, refreshToken: null, expiresAt: null, isAuthenticated: false });
+				set({
+					accessToken: null,
+					refreshToken: null,
+					expiresAt: null,
+					isAuthenticated: false,
+				});
 			},
 		}),
 		{ name: "fog-auth" },

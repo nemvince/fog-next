@@ -1,18 +1,4 @@
 import {
-	Sidebar,
-	SidebarContent,
-	SidebarFooter,
-	SidebarGroup,
-	SidebarGroupContent,
-	SidebarGroupLabel,
-	SidebarHeader,
-	SidebarMenu,
-	SidebarMenuButton,
-	SidebarMenuItem,
-	SidebarSeparator,
-} from "@/components/ui/sidebar";
-import { useAuthStore } from "@/store/auth";
-import {
 	ChartBar,
 	Cpu,
 	FolderOpen,
@@ -27,6 +13,20 @@ import {
 	WifiMedium,
 } from "@phosphor-icons/react";
 import { Link, useRouter } from "@tanstack/react-router";
+import {
+	Sidebar,
+	SidebarContent,
+	SidebarFooter,
+	SidebarGroup,
+	SidebarGroupContent,
+	SidebarGroupLabel,
+	SidebarHeader,
+	SidebarMenu,
+	SidebarMenuButton,
+	SidebarMenuItem,
+	SidebarSeparator,
+} from "@/components/ui/sidebar";
+import { useAuthStore } from "@/store/auth";
 
 const navItems = [
 	{ to: "/dashboard", label: "Dashboard", icon: HouseSimple },
@@ -73,15 +73,20 @@ export function AppSidebar() {
 						<SidebarMenu>
 							{navItems.map(({ to, label, icon: Icon }) => (
 								<SidebarMenuItem key={to}>
-									<SidebarMenuButton render={
-										<Link
-											to={to}
-											activeProps={{ className: "bg-sidebar-accent text-sidebar-accent-foreground" }}
-										>
-											<Icon />
-											<span>{label}</span>
-										</Link>
-									} />
+									<SidebarMenuButton
+										render={
+											<Link
+												to={to}
+												activeProps={{
+													className:
+														"bg-sidebar-accent text-sidebar-accent-foreground",
+												}}
+											>
+												<Icon />
+												<span>{label}</span>
+											</Link>
+										}
+									/>
 								</SidebarMenuItem>
 							))}
 						</SidebarMenu>
@@ -96,15 +101,20 @@ export function AppSidebar() {
 						<SidebarMenu>
 							{adminItems.map(({ to, label, icon: Icon }) => (
 								<SidebarMenuItem key={to}>
-									<SidebarMenuButton render={
-										<Link
-											to={to}
-											activeProps={{ className: "bg-sidebar-accent text-sidebar-accent-foreground" }}
-										>
-											<Icon />
-											<span>{label}</span>
-										</Link>
-									} />
+									<SidebarMenuButton
+										render={
+											<Link
+												to={to}
+												activeProps={{
+													className:
+														"bg-sidebar-accent text-sidebar-accent-foreground",
+												}}
+											>
+												<Icon />
+												<span>{label}</span>
+											</Link>
+										}
+									/>
 								</SidebarMenuItem>
 							))}
 						</SidebarMenu>
@@ -118,15 +128,20 @@ export function AppSidebar() {
 						<SidebarMenu>
 							{reportItems.map(({ to, label, icon: Icon }) => (
 								<SidebarMenuItem key={to}>
-									<SidebarMenuButton render={
-										<Link
-											to={to}
-											activeProps={{ className: "bg-sidebar-accent text-sidebar-accent-foreground" }}
-										>
-											<Icon />
-											<span>{label}</span>
-										</Link>
-									} />
+									<SidebarMenuButton
+										render={
+											<Link
+												to={to}
+												activeProps={{
+													className:
+														"bg-sidebar-accent text-sidebar-accent-foreground",
+												}}
+											>
+												<Icon />
+												<span>{label}</span>
+											</Link>
+										}
+									/>
 								</SidebarMenuItem>
 							))}
 						</SidebarMenu>

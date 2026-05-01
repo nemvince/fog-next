@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
+	"github.com/nemvince/fog-next/ent/agentlog"
 	"github.com/nemvince/fog-next/ent/auditlog"
 	"github.com/nemvince/fog-next/ent/globalsetting"
 	"github.com/nemvince/fog-next/ent/group"
@@ -52,6 +53,7 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
+	TypeAgentLog         = "AgentLog"
 	TypeAuditLog         = "AuditLog"
 	TypeGlobalSetting    = "GlobalSetting"
 	TypeGroup            = "Group"
@@ -80,6 +82,784 @@ const (
 	TypeTask             = "Task"
 	TypeUser             = "User"
 )
+
+// AgentLogMutation represents an operation that mutates the AgentLog nodes in the graph.
+type AgentLogMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *uuid.UUID
+	logged_at     *time.Time
+	level         *string
+	message       *string
+	attrs         *map[string]interface{}
+	created_at    *time.Time
+	clearedFields map[string]struct{}
+	task          *uuid.UUID
+	clearedtask   bool
+	host          *uuid.UUID
+	clearedhost   bool
+	done          bool
+	oldValue      func(context.Context) (*AgentLog, error)
+	predicates    []predicate.AgentLog
+}
+
+var _ ent.Mutation = (*AgentLogMutation)(nil)
+
+// agentlogOption allows management of the mutation configuration using functional options.
+type agentlogOption func(*AgentLogMutation)
+
+// newAgentLogMutation creates new mutation for the AgentLog entity.
+func newAgentLogMutation(c config, op Op, opts ...agentlogOption) *AgentLogMutation {
+	m := &AgentLogMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeAgentLog,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withAgentLogID sets the ID field of the mutation.
+func withAgentLogID(id uuid.UUID) agentlogOption {
+	return func(m *AgentLogMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *AgentLog
+		)
+		m.oldValue = func(ctx context.Context) (*AgentLog, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().AgentLog.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withAgentLog sets the old AgentLog of the mutation.
+func withAgentLog(node *AgentLog) agentlogOption {
+	return func(m *AgentLogMutation) {
+		m.oldValue = func(context.Context) (*AgentLog, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m AgentLogMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m AgentLogMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of AgentLog entities.
+func (m *AgentLogMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *AgentLogMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *AgentLogMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().AgentLog.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetTaskID sets the "task_id" field.
+func (m *AgentLogMutation) SetTaskID(u uuid.UUID) {
+	m.task = &u
+}
+
+// TaskID returns the value of the "task_id" field in the mutation.
+func (m *AgentLogMutation) TaskID() (r uuid.UUID, exists bool) {
+	v := m.task
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTaskID returns the old "task_id" field's value of the AgentLog entity.
+// If the AgentLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AgentLogMutation) OldTaskID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTaskID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTaskID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTaskID: %w", err)
+	}
+	return oldValue.TaskID, nil
+}
+
+// ResetTaskID resets all changes to the "task_id" field.
+func (m *AgentLogMutation) ResetTaskID() {
+	m.task = nil
+}
+
+// SetHostID sets the "host_id" field.
+func (m *AgentLogMutation) SetHostID(u uuid.UUID) {
+	m.host = &u
+}
+
+// HostID returns the value of the "host_id" field in the mutation.
+func (m *AgentLogMutation) HostID() (r uuid.UUID, exists bool) {
+	v := m.host
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldHostID returns the old "host_id" field's value of the AgentLog entity.
+// If the AgentLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AgentLogMutation) OldHostID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldHostID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldHostID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldHostID: %w", err)
+	}
+	return oldValue.HostID, nil
+}
+
+// ResetHostID resets all changes to the "host_id" field.
+func (m *AgentLogMutation) ResetHostID() {
+	m.host = nil
+}
+
+// SetLoggedAt sets the "logged_at" field.
+func (m *AgentLogMutation) SetLoggedAt(t time.Time) {
+	m.logged_at = &t
+}
+
+// LoggedAt returns the value of the "logged_at" field in the mutation.
+func (m *AgentLogMutation) LoggedAt() (r time.Time, exists bool) {
+	v := m.logged_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLoggedAt returns the old "logged_at" field's value of the AgentLog entity.
+// If the AgentLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AgentLogMutation) OldLoggedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLoggedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLoggedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLoggedAt: %w", err)
+	}
+	return oldValue.LoggedAt, nil
+}
+
+// ResetLoggedAt resets all changes to the "logged_at" field.
+func (m *AgentLogMutation) ResetLoggedAt() {
+	m.logged_at = nil
+}
+
+// SetLevel sets the "level" field.
+func (m *AgentLogMutation) SetLevel(s string) {
+	m.level = &s
+}
+
+// Level returns the value of the "level" field in the mutation.
+func (m *AgentLogMutation) Level() (r string, exists bool) {
+	v := m.level
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLevel returns the old "level" field's value of the AgentLog entity.
+// If the AgentLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AgentLogMutation) OldLevel(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLevel is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLevel requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLevel: %w", err)
+	}
+	return oldValue.Level, nil
+}
+
+// ResetLevel resets all changes to the "level" field.
+func (m *AgentLogMutation) ResetLevel() {
+	m.level = nil
+}
+
+// SetMessage sets the "message" field.
+func (m *AgentLogMutation) SetMessage(s string) {
+	m.message = &s
+}
+
+// Message returns the value of the "message" field in the mutation.
+func (m *AgentLogMutation) Message() (r string, exists bool) {
+	v := m.message
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMessage returns the old "message" field's value of the AgentLog entity.
+// If the AgentLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AgentLogMutation) OldMessage(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMessage is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMessage requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMessage: %w", err)
+	}
+	return oldValue.Message, nil
+}
+
+// ResetMessage resets all changes to the "message" field.
+func (m *AgentLogMutation) ResetMessage() {
+	m.message = nil
+}
+
+// SetAttrs sets the "attrs" field.
+func (m *AgentLogMutation) SetAttrs(value map[string]interface{}) {
+	m.attrs = &value
+}
+
+// Attrs returns the value of the "attrs" field in the mutation.
+func (m *AgentLogMutation) Attrs() (r map[string]interface{}, exists bool) {
+	v := m.attrs
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAttrs returns the old "attrs" field's value of the AgentLog entity.
+// If the AgentLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AgentLogMutation) OldAttrs(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAttrs is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAttrs requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAttrs: %w", err)
+	}
+	return oldValue.Attrs, nil
+}
+
+// ClearAttrs clears the value of the "attrs" field.
+func (m *AgentLogMutation) ClearAttrs() {
+	m.attrs = nil
+	m.clearedFields[agentlog.FieldAttrs] = struct{}{}
+}
+
+// AttrsCleared returns if the "attrs" field was cleared in this mutation.
+func (m *AgentLogMutation) AttrsCleared() bool {
+	_, ok := m.clearedFields[agentlog.FieldAttrs]
+	return ok
+}
+
+// ResetAttrs resets all changes to the "attrs" field.
+func (m *AgentLogMutation) ResetAttrs() {
+	m.attrs = nil
+	delete(m.clearedFields, agentlog.FieldAttrs)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *AgentLogMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *AgentLogMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the AgentLog entity.
+// If the AgentLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AgentLogMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *AgentLogMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// ClearTask clears the "task" edge to the Task entity.
+func (m *AgentLogMutation) ClearTask() {
+	m.clearedtask = true
+	m.clearedFields[agentlog.FieldTaskID] = struct{}{}
+}
+
+// TaskCleared reports if the "task" edge to the Task entity was cleared.
+func (m *AgentLogMutation) TaskCleared() bool {
+	return m.clearedtask
+}
+
+// TaskIDs returns the "task" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// TaskID instead. It exists only for internal usage by the builders.
+func (m *AgentLogMutation) TaskIDs() (ids []uuid.UUID) {
+	if id := m.task; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetTask resets all changes to the "task" edge.
+func (m *AgentLogMutation) ResetTask() {
+	m.task = nil
+	m.clearedtask = false
+}
+
+// ClearHost clears the "host" edge to the Host entity.
+func (m *AgentLogMutation) ClearHost() {
+	m.clearedhost = true
+	m.clearedFields[agentlog.FieldHostID] = struct{}{}
+}
+
+// HostCleared reports if the "host" edge to the Host entity was cleared.
+func (m *AgentLogMutation) HostCleared() bool {
+	return m.clearedhost
+}
+
+// HostIDs returns the "host" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// HostID instead. It exists only for internal usage by the builders.
+func (m *AgentLogMutation) HostIDs() (ids []uuid.UUID) {
+	if id := m.host; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetHost resets all changes to the "host" edge.
+func (m *AgentLogMutation) ResetHost() {
+	m.host = nil
+	m.clearedhost = false
+}
+
+// Where appends a list predicates to the AgentLogMutation builder.
+func (m *AgentLogMutation) Where(ps ...predicate.AgentLog) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the AgentLogMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *AgentLogMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.AgentLog, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *AgentLogMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *AgentLogMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (AgentLog).
+func (m *AgentLogMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *AgentLogMutation) Fields() []string {
+	fields := make([]string, 0, 7)
+	if m.task != nil {
+		fields = append(fields, agentlog.FieldTaskID)
+	}
+	if m.host != nil {
+		fields = append(fields, agentlog.FieldHostID)
+	}
+	if m.logged_at != nil {
+		fields = append(fields, agentlog.FieldLoggedAt)
+	}
+	if m.level != nil {
+		fields = append(fields, agentlog.FieldLevel)
+	}
+	if m.message != nil {
+		fields = append(fields, agentlog.FieldMessage)
+	}
+	if m.attrs != nil {
+		fields = append(fields, agentlog.FieldAttrs)
+	}
+	if m.created_at != nil {
+		fields = append(fields, agentlog.FieldCreatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *AgentLogMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case agentlog.FieldTaskID:
+		return m.TaskID()
+	case agentlog.FieldHostID:
+		return m.HostID()
+	case agentlog.FieldLoggedAt:
+		return m.LoggedAt()
+	case agentlog.FieldLevel:
+		return m.Level()
+	case agentlog.FieldMessage:
+		return m.Message()
+	case agentlog.FieldAttrs:
+		return m.Attrs()
+	case agentlog.FieldCreatedAt:
+		return m.CreatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *AgentLogMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case agentlog.FieldTaskID:
+		return m.OldTaskID(ctx)
+	case agentlog.FieldHostID:
+		return m.OldHostID(ctx)
+	case agentlog.FieldLoggedAt:
+		return m.OldLoggedAt(ctx)
+	case agentlog.FieldLevel:
+		return m.OldLevel(ctx)
+	case agentlog.FieldMessage:
+		return m.OldMessage(ctx)
+	case agentlog.FieldAttrs:
+		return m.OldAttrs(ctx)
+	case agentlog.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown AgentLog field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AgentLogMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case agentlog.FieldTaskID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTaskID(v)
+		return nil
+	case agentlog.FieldHostID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetHostID(v)
+		return nil
+	case agentlog.FieldLoggedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLoggedAt(v)
+		return nil
+	case agentlog.FieldLevel:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLevel(v)
+		return nil
+	case agentlog.FieldMessage:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMessage(v)
+		return nil
+	case agentlog.FieldAttrs:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAttrs(v)
+		return nil
+	case agentlog.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown AgentLog field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *AgentLogMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *AgentLogMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AgentLogMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown AgentLog numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *AgentLogMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(agentlog.FieldAttrs) {
+		fields = append(fields, agentlog.FieldAttrs)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *AgentLogMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *AgentLogMutation) ClearField(name string) error {
+	switch name {
+	case agentlog.FieldAttrs:
+		m.ClearAttrs()
+		return nil
+	}
+	return fmt.Errorf("unknown AgentLog nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *AgentLogMutation) ResetField(name string) error {
+	switch name {
+	case agentlog.FieldTaskID:
+		m.ResetTaskID()
+		return nil
+	case agentlog.FieldHostID:
+		m.ResetHostID()
+		return nil
+	case agentlog.FieldLoggedAt:
+		m.ResetLoggedAt()
+		return nil
+	case agentlog.FieldLevel:
+		m.ResetLevel()
+		return nil
+	case agentlog.FieldMessage:
+		m.ResetMessage()
+		return nil
+	case agentlog.FieldAttrs:
+		m.ResetAttrs()
+		return nil
+	case agentlog.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown AgentLog field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *AgentLogMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.task != nil {
+		edges = append(edges, agentlog.EdgeTask)
+	}
+	if m.host != nil {
+		edges = append(edges, agentlog.EdgeHost)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *AgentLogMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case agentlog.EdgeTask:
+		if id := m.task; id != nil {
+			return []ent.Value{*id}
+		}
+	case agentlog.EdgeHost:
+		if id := m.host; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *AgentLogMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *AgentLogMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *AgentLogMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.clearedtask {
+		edges = append(edges, agentlog.EdgeTask)
+	}
+	if m.clearedhost {
+		edges = append(edges, agentlog.EdgeHost)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *AgentLogMutation) EdgeCleared(name string) bool {
+	switch name {
+	case agentlog.EdgeTask:
+		return m.clearedtask
+	case agentlog.EdgeHost:
+		return m.clearedhost
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *AgentLogMutation) ClearEdge(name string) error {
+	switch name {
+	case agentlog.EdgeTask:
+		m.ClearTask()
+		return nil
+	case agentlog.EdgeHost:
+		m.ClearHost()
+		return nil
+	}
+	return fmt.Errorf("unknown AgentLog unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *AgentLogMutation) ResetEdge(name string) error {
+	switch name {
+	case agentlog.EdgeTask:
+		m.ResetTask()
+		return nil
+	case agentlog.EdgeHost:
+		m.ResetHost()
+		return nil
+	}
+	return fmt.Errorf("unknown AgentLog edge %s", name)
+}
 
 // AuditLogMutation represents an operation that mutates the AuditLog nodes in the graph.
 type AuditLogMutation struct {
@@ -2587,6 +3367,9 @@ type HostMutation struct {
 	snapin_jobs          map[uuid.UUID]struct{}
 	removedsnapin_jobs   map[uuid.UUID]struct{}
 	clearedsnapin_jobs   bool
+	agent_logs           map[uuid.UUID]struct{}
+	removedagent_logs    map[uuid.UUID]struct{}
+	clearedagent_logs    bool
 	done                 bool
 	oldValue             func(context.Context) (*Host, error)
 	predicates           []predicate.Host
@@ -3683,6 +4466,60 @@ func (m *HostMutation) ResetSnapinJobs() {
 	m.removedsnapin_jobs = nil
 }
 
+// AddAgentLogIDs adds the "agent_logs" edge to the AgentLog entity by ids.
+func (m *HostMutation) AddAgentLogIDs(ids ...uuid.UUID) {
+	if m.agent_logs == nil {
+		m.agent_logs = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.agent_logs[ids[i]] = struct{}{}
+	}
+}
+
+// ClearAgentLogs clears the "agent_logs" edge to the AgentLog entity.
+func (m *HostMutation) ClearAgentLogs() {
+	m.clearedagent_logs = true
+}
+
+// AgentLogsCleared reports if the "agent_logs" edge to the AgentLog entity was cleared.
+func (m *HostMutation) AgentLogsCleared() bool {
+	return m.clearedagent_logs
+}
+
+// RemoveAgentLogIDs removes the "agent_logs" edge to the AgentLog entity by IDs.
+func (m *HostMutation) RemoveAgentLogIDs(ids ...uuid.UUID) {
+	if m.removedagent_logs == nil {
+		m.removedagent_logs = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.agent_logs, ids[i])
+		m.removedagent_logs[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedAgentLogs returns the removed IDs of the "agent_logs" edge to the AgentLog entity.
+func (m *HostMutation) RemovedAgentLogsIDs() (ids []uuid.UUID) {
+	for id := range m.removedagent_logs {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// AgentLogsIDs returns the "agent_logs" edge IDs in the mutation.
+func (m *HostMutation) AgentLogsIDs() (ids []uuid.UUID) {
+	for id := range m.agent_logs {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetAgentLogs resets all changes to the "agent_logs" edge.
+func (m *HostMutation) ResetAgentLogs() {
+	m.agent_logs = nil
+	m.clearedagent_logs = false
+	m.removedagent_logs = nil
+}
+
 // Where appends a list predicates to the HostMutation builder.
 func (m *HostMutation) Where(ps ...predicate.Host) {
 	m.predicates = append(m.predicates, ps...)
@@ -4058,7 +4895,7 @@ func (m *HostMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *HostMutation) AddedEdges() []string {
-	edges := make([]string, 0, 9)
+	edges := make([]string, 0, 10)
 	if m.image != nil {
 		edges = append(edges, host.EdgeImage)
 	}
@@ -4085,6 +4922,9 @@ func (m *HostMutation) AddedEdges() []string {
 	}
 	if m.snapin_jobs != nil {
 		edges = append(edges, host.EdgeSnapinJobs)
+	}
+	if m.agent_logs != nil {
+		edges = append(edges, host.EdgeAgentLogs)
 	}
 	return edges
 }
@@ -4143,13 +4983,19 @@ func (m *HostMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case host.EdgeAgentLogs:
+		ids := make([]ent.Value, 0, len(m.agent_logs))
+		for id := range m.agent_logs {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *HostMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 9)
+	edges := make([]string, 0, 10)
 	if m.removedmacs != nil {
 		edges = append(edges, host.EdgeMacs)
 	}
@@ -4170,6 +5016,9 @@ func (m *HostMutation) RemovedEdges() []string {
 	}
 	if m.removedsnapin_jobs != nil {
 		edges = append(edges, host.EdgeSnapinJobs)
+	}
+	if m.removedagent_logs != nil {
+		edges = append(edges, host.EdgeAgentLogs)
 	}
 	return edges
 }
@@ -4220,13 +5069,19 @@ func (m *HostMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case host.EdgeAgentLogs:
+		ids := make([]ent.Value, 0, len(m.removedagent_logs))
+		for id := range m.removedagent_logs {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *HostMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 9)
+	edges := make([]string, 0, 10)
 	if m.clearedimage {
 		edges = append(edges, host.EdgeImage)
 	}
@@ -4254,6 +5109,9 @@ func (m *HostMutation) ClearedEdges() []string {
 	if m.clearedsnapin_jobs {
 		edges = append(edges, host.EdgeSnapinJobs)
 	}
+	if m.clearedagent_logs {
+		edges = append(edges, host.EdgeAgentLogs)
+	}
 	return edges
 }
 
@@ -4279,6 +5137,8 @@ func (m *HostMutation) EdgeCleared(name string) bool {
 		return m.clearedimaging_logs
 	case host.EdgeSnapinJobs:
 		return m.clearedsnapin_jobs
+	case host.EdgeAgentLogs:
+		return m.clearedagent_logs
 	}
 	return false
 }
@@ -4327,6 +5187,9 @@ func (m *HostMutation) ResetEdge(name string) error {
 		return nil
 	case host.EdgeSnapinJobs:
 		m.ResetSnapinJobs()
+		return nil
+	case host.EdgeAgentLogs:
+		m.ResetAgentLogs()
 		return nil
 	}
 	return fmt.Errorf("unknown Host edge %s", name)
@@ -20621,6 +21484,9 @@ type TaskMutation struct {
 	clearedstorage_group bool
 	imaging_log          *uuid.UUID
 	clearedimaging_log   bool
+	agent_logs           map[uuid.UUID]struct{}
+	removedagent_logs    map[uuid.UUID]struct{}
+	clearedagent_logs    bool
 	done                 bool
 	oldValue             func(context.Context) (*Task, error)
 	predicates           []predicate.Task
@@ -21699,6 +22565,60 @@ func (m *TaskMutation) ResetImagingLog() {
 	m.clearedimaging_log = false
 }
 
+// AddAgentLogIDs adds the "agent_logs" edge to the AgentLog entity by ids.
+func (m *TaskMutation) AddAgentLogIDs(ids ...uuid.UUID) {
+	if m.agent_logs == nil {
+		m.agent_logs = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.agent_logs[ids[i]] = struct{}{}
+	}
+}
+
+// ClearAgentLogs clears the "agent_logs" edge to the AgentLog entity.
+func (m *TaskMutation) ClearAgentLogs() {
+	m.clearedagent_logs = true
+}
+
+// AgentLogsCleared reports if the "agent_logs" edge to the AgentLog entity was cleared.
+func (m *TaskMutation) AgentLogsCleared() bool {
+	return m.clearedagent_logs
+}
+
+// RemoveAgentLogIDs removes the "agent_logs" edge to the AgentLog entity by IDs.
+func (m *TaskMutation) RemoveAgentLogIDs(ids ...uuid.UUID) {
+	if m.removedagent_logs == nil {
+		m.removedagent_logs = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.agent_logs, ids[i])
+		m.removedagent_logs[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedAgentLogs returns the removed IDs of the "agent_logs" edge to the AgentLog entity.
+func (m *TaskMutation) RemovedAgentLogsIDs() (ids []uuid.UUID) {
+	for id := range m.removedagent_logs {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// AgentLogsIDs returns the "agent_logs" edge IDs in the mutation.
+func (m *TaskMutation) AgentLogsIDs() (ids []uuid.UUID) {
+	for id := range m.agent_logs {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetAgentLogs resets all changes to the "agent_logs" edge.
+func (m *TaskMutation) ResetAgentLogs() {
+	m.agent_logs = nil
+	m.clearedagent_logs = false
+	m.removedagent_logs = nil
+}
+
 // Where appends a list predicates to the TaskMutation builder.
 func (m *TaskMutation) Where(ps ...predicate.Task) {
 	m.predicates = append(m.predicates, ps...)
@@ -22216,7 +23136,7 @@ func (m *TaskMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *TaskMutation) AddedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 6)
 	if m.host != nil {
 		edges = append(edges, task.EdgeHost)
 	}
@@ -22231,6 +23151,9 @@ func (m *TaskMutation) AddedEdges() []string {
 	}
 	if m.imaging_log != nil {
 		edges = append(edges, task.EdgeImagingLog)
+	}
+	if m.agent_logs != nil {
+		edges = append(edges, task.EdgeAgentLogs)
 	}
 	return edges
 }
@@ -22259,25 +23182,42 @@ func (m *TaskMutation) AddedIDs(name string) []ent.Value {
 		if id := m.imaging_log; id != nil {
 			return []ent.Value{*id}
 		}
+	case task.EdgeAgentLogs:
+		ids := make([]ent.Value, 0, len(m.agent_logs))
+		for id := range m.agent_logs {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *TaskMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 6)
+	if m.removedagent_logs != nil {
+		edges = append(edges, task.EdgeAgentLogs)
+	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *TaskMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case task.EdgeAgentLogs:
+		ids := make([]ent.Value, 0, len(m.removedagent_logs))
+		for id := range m.removedagent_logs {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *TaskMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 6)
 	if m.clearedhost {
 		edges = append(edges, task.EdgeHost)
 	}
@@ -22292,6 +23232,9 @@ func (m *TaskMutation) ClearedEdges() []string {
 	}
 	if m.clearedimaging_log {
 		edges = append(edges, task.EdgeImagingLog)
+	}
+	if m.clearedagent_logs {
+		edges = append(edges, task.EdgeAgentLogs)
 	}
 	return edges
 }
@@ -22310,6 +23253,8 @@ func (m *TaskMutation) EdgeCleared(name string) bool {
 		return m.clearedstorage_group
 	case task.EdgeImagingLog:
 		return m.clearedimaging_log
+	case task.EdgeAgentLogs:
+		return m.clearedagent_logs
 	}
 	return false
 }
@@ -22355,6 +23300,9 @@ func (m *TaskMutation) ResetEdge(name string) error {
 		return nil
 	case task.EdgeImagingLog:
 		m.ResetImagingLog()
+		return nil
+	case task.EdgeAgentLogs:
+		m.ResetAgentLogs()
 		return nil
 	}
 	return fmt.Errorf("unknown Task edge %s", name)

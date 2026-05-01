@@ -109,5 +109,6 @@ func (Task) Edges() []ent.Edge {
 		edge.From("storage_node", StorageNode.Type).Ref("tasks").Field("storage_node_id").Unique(),
 		edge.From("storage_group", StorageGroup.Type).Ref("tasks").Field("storage_group_id").Unique(),
 		edge.To("imaging_log", ImagingLog.Type).Unique(),
+		edge.To("agent_logs", AgentLog.Type),
 	}
 }

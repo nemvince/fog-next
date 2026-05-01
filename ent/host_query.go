@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/nemvince/fog-next/ent/agentlog"
 	"github.com/nemvince/fog-next/ent/groupmember"
 	"github.com/nemvince/fog-next/ent/host"
 	"github.com/nemvince/fog-next/ent/hostmac"
@@ -42,6 +43,7 @@ type HostQuery struct {
 	withTasks             *TaskQuery
 	withImagingLogs       *ImagingLogQuery
 	withSnapinJobs        *SnapinJobQuery
+	withAgentLogs         *AgentLogQuery
 	withNamedMacs         map[string]*HostMACQuery
 	withNamedPendingMacs  map[string]*PendingMACQuery
 	withNamedGroupMembers map[string]*GroupMemberQuery
@@ -49,6 +51,7 @@ type HostQuery struct {
 	withNamedTasks        map[string]*TaskQuery
 	withNamedImagingLogs  map[string]*ImagingLogQuery
 	withNamedSnapinJobs   map[string]*SnapinJobQuery
+	withNamedAgentLogs    map[string]*AgentLogQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -283,6 +286,28 @@ func (_q *HostQuery) QuerySnapinJobs() *SnapinJobQuery {
 	return query
 }
 
+// QueryAgentLogs chains the current query on the "agent_logs" edge.
+func (_q *HostQuery) QueryAgentLogs() *AgentLogQuery {
+	query := (&AgentLogClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(host.Table, host.FieldID, selector),
+			sqlgraph.To(agentlog.Table, agentlog.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, host.AgentLogsTable, host.AgentLogsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // First returns the first Host entity from the query.
 // Returns a *NotFoundError when no Host was found.
 func (_q *HostQuery) First(ctx context.Context) (*Host, error) {
@@ -484,6 +509,7 @@ func (_q *HostQuery) Clone() *HostQuery {
 		withTasks:        _q.withTasks.Clone(),
 		withImagingLogs:  _q.withImagingLogs.Clone(),
 		withSnapinJobs:   _q.withSnapinJobs.Clone(),
+		withAgentLogs:    _q.withAgentLogs.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -589,6 +615,17 @@ func (_q *HostQuery) WithSnapinJobs(opts ...func(*SnapinJobQuery)) *HostQuery {
 	return _q
 }
 
+// WithAgentLogs tells the query-builder to eager-load the nodes that are connected to
+// the "agent_logs" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *HostQuery) WithAgentLogs(opts ...func(*AgentLogQuery)) *HostQuery {
+	query := (&AgentLogClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withAgentLogs = query
+	return _q
+}
+
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
 //
@@ -667,7 +704,7 @@ func (_q *HostQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Host, e
 	var (
 		nodes       = []*Host{}
 		_spec       = _q.querySpec()
-		loadedTypes = [9]bool{
+		loadedTypes = [10]bool{
 			_q.withImage != nil,
 			_q.withMacs != nil,
 			_q.withInventory != nil,
@@ -677,6 +714,7 @@ func (_q *HostQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Host, e
 			_q.withTasks != nil,
 			_q.withImagingLogs != nil,
 			_q.withSnapinJobs != nil,
+			_q.withAgentLogs != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -758,6 +796,13 @@ func (_q *HostQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Host, e
 			return nil, err
 		}
 	}
+	if query := _q.withAgentLogs; query != nil {
+		if err := _q.loadAgentLogs(ctx, query, nodes,
+			func(n *Host) { n.Edges.AgentLogs = []*AgentLog{} },
+			func(n *Host, e *AgentLog) { n.Edges.AgentLogs = append(n.Edges.AgentLogs, e) }); err != nil {
+			return nil, err
+		}
+	}
 	for name, query := range _q.withNamedMacs {
 		if err := _q.loadMacs(ctx, query, nodes,
 			func(n *Host) { n.appendNamedMacs(name) },
@@ -804,6 +849,13 @@ func (_q *HostQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Host, e
 		if err := _q.loadSnapinJobs(ctx, query, nodes,
 			func(n *Host) { n.appendNamedSnapinJobs(name) },
 			func(n *Host, e *SnapinJob) { n.appendNamedSnapinJobs(name, e) }); err != nil {
+			return nil, err
+		}
+	}
+	for name, query := range _q.withNamedAgentLogs {
+		if err := _q.loadAgentLogs(ctx, query, nodes,
+			func(n *Host) { n.appendNamedAgentLogs(name) },
+			func(n *Host, e *AgentLog) { n.appendNamedAgentLogs(name, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -1082,6 +1134,36 @@ func (_q *HostQuery) loadSnapinJobs(ctx context.Context, query *SnapinJobQuery, 
 	}
 	return nil
 }
+func (_q *HostQuery) loadAgentLogs(ctx context.Context, query *AgentLogQuery, nodes []*Host, init func(*Host), assign func(*Host, *AgentLog)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Host)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(agentlog.FieldHostID)
+	}
+	query.Where(predicate.AgentLog(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(host.AgentLogsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.HostID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "host_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
 
 func (_q *HostQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
@@ -1262,6 +1344,20 @@ func (_q *HostQuery) WithNamedSnapinJobs(name string, opts ...func(*SnapinJobQue
 		_q.withNamedSnapinJobs = make(map[string]*SnapinJobQuery)
 	}
 	_q.withNamedSnapinJobs[name] = query
+	return _q
+}
+
+// WithNamedAgentLogs tells the query-builder to eager-load the nodes that are connected to the "agent_logs"
+// edge with the given name. The optional arguments are used to configure the query builder of the edge.
+func (_q *HostQuery) WithNamedAgentLogs(name string, opts ...func(*AgentLogQuery)) *HostQuery {
+	query := (&AgentLogClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	if _q.withNamedAgentLogs == nil {
+		_q.withNamedAgentLogs = make(map[string]*AgentLogQuery)
+	}
+	_q.withNamedAgentLogs[name] = query
 	return _q
 }
 

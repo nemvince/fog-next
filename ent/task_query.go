@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/nemvince/fog-next/ent/agentlog"
 	"github.com/nemvince/fog-next/ent/host"
 	"github.com/nemvince/fog-next/ent/image"
 	"github.com/nemvince/fog-next/ent/imaginglog"
@@ -25,15 +26,17 @@ import (
 // TaskQuery is the builder for querying Task entities.
 type TaskQuery struct {
 	config
-	ctx              *QueryContext
-	order            []task.OrderOption
-	inters           []Interceptor
-	predicates       []predicate.Task
-	withHost         *HostQuery
-	withImage        *ImageQuery
-	withStorageNode  *StorageNodeQuery
-	withStorageGroup *StorageGroupQuery
-	withImagingLog   *ImagingLogQuery
+	ctx                *QueryContext
+	order              []task.OrderOption
+	inters             []Interceptor
+	predicates         []predicate.Task
+	withHost           *HostQuery
+	withImage          *ImageQuery
+	withStorageNode    *StorageNodeQuery
+	withStorageGroup   *StorageGroupQuery
+	withImagingLog     *ImagingLogQuery
+	withAgentLogs      *AgentLogQuery
+	withNamedAgentLogs map[string]*AgentLogQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -173,6 +176,28 @@ func (_q *TaskQuery) QueryImagingLog() *ImagingLogQuery {
 			sqlgraph.From(task.Table, task.FieldID, selector),
 			sqlgraph.To(imaginglog.Table, imaginglog.FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, false, task.ImagingLogTable, task.ImagingLogColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryAgentLogs chains the current query on the "agent_logs" edge.
+func (_q *TaskQuery) QueryAgentLogs() *AgentLogQuery {
+	query := (&AgentLogClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(task.Table, task.FieldID, selector),
+			sqlgraph.To(agentlog.Table, agentlog.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, task.AgentLogsTable, task.AgentLogsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -377,6 +402,7 @@ func (_q *TaskQuery) Clone() *TaskQuery {
 		withStorageNode:  _q.withStorageNode.Clone(),
 		withStorageGroup: _q.withStorageGroup.Clone(),
 		withImagingLog:   _q.withImagingLog.Clone(),
+		withAgentLogs:    _q.withAgentLogs.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -435,6 +461,17 @@ func (_q *TaskQuery) WithImagingLog(opts ...func(*ImagingLogQuery)) *TaskQuery {
 		opt(query)
 	}
 	_q.withImagingLog = query
+	return _q
+}
+
+// WithAgentLogs tells the query-builder to eager-load the nodes that are connected to
+// the "agent_logs" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *TaskQuery) WithAgentLogs(opts ...func(*AgentLogQuery)) *TaskQuery {
+	query := (&AgentLogClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withAgentLogs = query
 	return _q
 }
 
@@ -516,12 +553,13 @@ func (_q *TaskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Task, e
 	var (
 		nodes       = []*Task{}
 		_spec       = _q.querySpec()
-		loadedTypes = [5]bool{
+		loadedTypes = [6]bool{
 			_q.withHost != nil,
 			_q.withImage != nil,
 			_q.withStorageNode != nil,
 			_q.withStorageGroup != nil,
 			_q.withImagingLog != nil,
+			_q.withAgentLogs != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -569,6 +607,20 @@ func (_q *TaskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Task, e
 	if query := _q.withImagingLog; query != nil {
 		if err := _q.loadImagingLog(ctx, query, nodes, nil,
 			func(n *Task, e *ImagingLog) { n.Edges.ImagingLog = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withAgentLogs; query != nil {
+		if err := _q.loadAgentLogs(ctx, query, nodes,
+			func(n *Task) { n.Edges.AgentLogs = []*AgentLog{} },
+			func(n *Task, e *AgentLog) { n.Edges.AgentLogs = append(n.Edges.AgentLogs, e) }); err != nil {
+			return nil, err
+		}
+	}
+	for name, query := range _q.withNamedAgentLogs {
+		if err := _q.loadAgentLogs(ctx, query, nodes,
+			func(n *Task) { n.appendNamedAgentLogs(name) },
+			func(n *Task, e *AgentLog) { n.appendNamedAgentLogs(name, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -727,6 +779,36 @@ func (_q *TaskQuery) loadImagingLog(ctx context.Context, query *ImagingLogQuery,
 	}
 	return nil
 }
+func (_q *TaskQuery) loadAgentLogs(ctx context.Context, query *AgentLogQuery, nodes []*Task, init func(*Task), assign func(*Task, *AgentLog)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Task)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(agentlog.FieldTaskID)
+	}
+	query.Where(predicate.AgentLog(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(task.AgentLogsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.TaskID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "task_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
 
 func (_q *TaskQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
@@ -819,6 +901,20 @@ func (_q *TaskQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector.Limit(*limit)
 	}
 	return selector
+}
+
+// WithNamedAgentLogs tells the query-builder to eager-load the nodes that are connected to the "agent_logs"
+// edge with the given name. The optional arguments are used to configure the query builder of the edge.
+func (_q *TaskQuery) WithNamedAgentLogs(name string, opts ...func(*AgentLogQuery)) *TaskQuery {
+	query := (&AgentLogClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	if _q.withNamedAgentLogs == nil {
+		_q.withNamedAgentLogs = make(map[string]*AgentLogQuery)
+	}
+	_q.withNamedAgentLogs[name] = query
+	return _q
 }
 
 // TaskGroupBy is the group-by builder for Task entities.

@@ -8,6 +8,7 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/nemvince/fog-next/ent"
+	"github.com/nemvince/fog-next/ent/agentlog"
 	"github.com/nemvince/fog-next/ent/auditlog"
 	"github.com/nemvince/fog-next/ent/globalsetting"
 	"github.com/nemvince/fog-next/ent/group"
@@ -92,6 +93,33 @@ func (f TraverseFunc) Traverse(ctx context.Context, q ent.Query) error {
 		return err
 	}
 	return f(ctx, query)
+}
+
+// The AgentLogFunc type is an adapter to allow the use of ordinary function as a Querier.
+type AgentLogFunc func(context.Context, *ent.AgentLogQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f AgentLogFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.AgentLogQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.AgentLogQuery", q)
+}
+
+// The TraverseAgentLog type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseAgentLog func(context.Context, *ent.AgentLogQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseAgentLog) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseAgentLog) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.AgentLogQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.AgentLogQuery", q)
 }
 
 // The AuditLogFunc type is an adapter to allow the use of ordinary function as a Querier.
@@ -826,6 +854,8 @@ func (f TraverseUser) Traverse(ctx context.Context, q ent.Query) error {
 // NewQuery returns the generic Query interface for the given typed query.
 func NewQuery(q ent.Query) (Query, error) {
 	switch q := q.(type) {
+	case *ent.AgentLogQuery:
+		return &query[*ent.AgentLogQuery, predicate.AgentLog, agentlog.OrderOption]{typ: ent.TypeAgentLog, tq: q}, nil
 	case *ent.AuditLogQuery:
 		return &query[*ent.AuditLogQuery, predicate.AuditLog, auditlog.OrderOption]{typ: ent.TypeAuditLog, tq: q}, nil
 	case *ent.GlobalSettingQuery:

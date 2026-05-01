@@ -1,3 +1,10 @@
+import { Pencil, Plus, Trash } from "@phosphor-icons/react";
+import { useForm } from "@tanstack/react-form";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+import { toast } from "sonner";
+import * as z from "zod";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -42,13 +49,6 @@ import {
 } from "@/components/ui/table";
 import { api } from "@/lib/api";
 import type { StorageGroup, StorageNode } from "@/types";
-import { Pencil, Plus, Trash } from "@phosphor-icons/react";
-import { useForm } from "@tanstack/react-form";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { toast } from "sonner";
-import * as z from "zod";
 
 export const Route = createFileRoute("/_auth/storage")({
 	component: StoragePage,
@@ -82,18 +82,24 @@ function StoragePage() {
 
 	const nodesQuery = useQuery({
 		queryKey: ["storage-nodes", selectedGroup?.id],
-		queryFn: () => api.get<{ data: StorageNode[] }>(`/storage/groups/${selectedGroup!.id}/nodes`),
+		queryFn: () =>
+			api.get<{ data: StorageNode[] }>(
+				// biome-ignore lint/style/noNonNullAssertion: enabled only when selectedGroup is set
+				`/storage/groups/${selectedGroup!.id}/nodes`,
+			),
 		enabled: !!selectedGroup,
 	});
 
 	const createGroupMutation = useMutation({
-		mutationFn: (values: z.infer<typeof groupSchema>) => api.post<StorageGroup>("/storage/groups", values),
+		mutationFn: (values: z.infer<typeof groupSchema>) =>
+			api.post<StorageGroup>("/storage/groups", values),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: ["storage-groups"] });
 			setCreateGroupOpen(false);
 			toast.success("Storage group created");
 		},
-		onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
+		onError: (err) =>
+			toast.error(err instanceof Error ? err.message : "Failed"),
 	});
 
 	const deleteGroupMutation = useMutation({
@@ -103,38 +109,57 @@ function StoragePage() {
 			if (selectedGroup?.id === id) setSelectedGroup(null);
 			toast.success("Storage group deleted");
 		},
-		onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
+		onError: (err) =>
+			toast.error(err instanceof Error ? err.message : "Failed"),
 	});
 
 	const createNodeMutation = useMutation({
 		mutationFn: (values: z.infer<typeof nodeSchema>) =>
-			api.post<StorageNode>(`/storage/groups/${selectedGroup!.id}/nodes`, values),
+			api.post<StorageNode>(
+				// biome-ignore lint/style/noNonNullAssertion: mutates only when selectedGroup is set
+				`/storage/groups/${selectedGroup!.id}/nodes`,
+				values,
+			),
 		onSuccess: () => {
-			void qc.invalidateQueries({ queryKey: ["storage-nodes", selectedGroup?.id] });
+			void qc.invalidateQueries({
+				queryKey: ["storage-nodes", selectedGroup?.id],
+			});
 			setCreateNodeOpen(false);
 			toast.success("Node added");
 		},
-		onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
+		onError: (err) =>
+			toast.error(err instanceof Error ? err.message : "Failed"),
 	});
 
 	const updateNodeMutation = useMutation({
-		mutationFn: ({ id, values }: { id: string; values: z.infer<typeof nodeSchema> }) =>
-			api.put<StorageNode>(`/storage/nodes/${id}`, values),
+		mutationFn: ({
+			id,
+			values,
+		}: {
+			id: string;
+			values: z.infer<typeof nodeSchema>;
+		}) => api.put<StorageNode>(`/storage/nodes/${id}`, values),
 		onSuccess: () => {
-			void qc.invalidateQueries({ queryKey: ["storage-nodes", selectedGroup?.id] });
+			void qc.invalidateQueries({
+				queryKey: ["storage-nodes", selectedGroup?.id],
+			});
 			setEditNode(null);
 			toast.success("Node updated");
 		},
-		onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
+		onError: (err) =>
+			toast.error(err instanceof Error ? err.message : "Failed"),
 	});
 
 	const deleteNodeMutation = useMutation({
 		mutationFn: (id: string) => api.del<void>(`/storage/nodes/${id}`),
 		onSuccess: () => {
-			void qc.invalidateQueries({ queryKey: ["storage-nodes", selectedGroup?.id] });
+			void qc.invalidateQueries({
+				queryKey: ["storage-nodes", selectedGroup?.id],
+			});
 			toast.success("Node removed");
 		},
-		onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
+		onError: (err) =>
+			toast.error(err instanceof Error ? err.message : "Failed"),
 	});
 
 	const groupForm = useForm({
@@ -144,7 +169,14 @@ function StoragePage() {
 	});
 
 	const nodeForm = useForm({
-		defaultValues: { name: "", description: "", ip: "", path: "", maxClients: 10, bandwidthMbps: 0 },
+		defaultValues: {
+			name: "",
+			description: "",
+			ip: "",
+			path: "",
+			maxClients: 10,
+			bandwidthMbps: 0,
+		},
 		validators: { onSubmit: nodeSchema },
 		onSubmit: ({ value }) => createNodeMutation.mutate(value),
 	});
@@ -160,7 +192,8 @@ function StoragePage() {
 		},
 		validators: { onSubmit: nodeSchema },
 		onSubmit: ({ value }) => {
-			if (editNode) updateNodeMutation.mutate({ id: editNode.id, values: value });
+			if (editNode)
+				updateNodeMutation.mutate({ id: editNode.id, values: value });
 		},
 	});
 
@@ -173,10 +206,13 @@ function StoragePage() {
 				{(["name", "ip", "path", "description"] as const).map((fieldName) => (
 					<formInstance.Field key={fieldName} name={fieldName}>
 						{(field) => {
-							const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+							const isInvalid =
+								field.state.meta.isTouched && !field.state.meta.isValid;
 							return (
 								<Field data-invalid={isInvalid}>
-									<FieldLabel htmlFor={field.name} className="capitalize">{fieldName}</FieldLabel>
+									<FieldLabel htmlFor={field.name} className="capitalize">
+										{fieldName}
+									</FieldLabel>
 									<Input
 										id={field.name}
 										name={field.name}
@@ -200,7 +236,9 @@ function StoragePage() {
 						<formInstance.Field key={fieldName} name={fieldName}>
 							{(field) => (
 								<Field>
-									<FieldLabel htmlFor={field.name}>{labels[fieldName]}</FieldLabel>
+									<FieldLabel htmlFor={field.name}>
+										{labels[fieldName]}
+									</FieldLabel>
 									<Input
 										id={field.name}
 										name={field.name}
@@ -230,13 +268,19 @@ function StoragePage() {
 				<Card className="md:col-span-1">
 					<CardHeader className="flex flex-row items-center justify-between">
 						<CardTitle>Storage Groups</CardTitle>
-						<Button size="sm" variant="ghost" onClick={() => setCreateGroupOpen(true)}>
+						<Button
+							size="sm"
+							variant="ghost"
+							onClick={() => setCreateGroupOpen(true)}
+						>
 							<Plus />
 						</Button>
 					</CardHeader>
 					<CardContent className="p-0">
 						{groups.length === 0 ? (
-							<p className="px-4 py-6 text-sm text-muted-foreground">No groups</p>
+							<p className="px-4 py-6 text-sm text-muted-foreground">
+								No groups
+							</p>
 						) : (
 							<Table>
 								<TableBody>
@@ -252,21 +296,32 @@ function StoragePage() {
 											</TableCell>
 											<TableCell className="text-right">
 												<AlertDialog>
-													<AlertDialogTrigger render={
-														<Button variant="ghost" size="icon-xs" onClick={(e) => e.stopPropagation()}>
-															<Trash />
-														</Button>
-													} />
+													<AlertDialogTrigger
+														render={
+															<Button
+																variant="ghost"
+																size="icon-xs"
+																onClick={(e) => e.stopPropagation()}
+															>
+																<Trash />
+															</Button>
+														}
+													/>
 													<AlertDialogContent>
 														<AlertDialogHeader>
 															<AlertDialogTitle>Delete group?</AlertDialogTitle>
 															<AlertDialogDescription>
-																This will delete "{group.name}" and all its nodes.
+																This will delete "{group.name}" and all its
+																nodes.
 															</AlertDialogDescription>
 														</AlertDialogHeader>
 														<AlertDialogFooter>
 															<AlertDialogCancel>Cancel</AlertDialogCancel>
-															<AlertDialogAction onClick={() => deleteGroupMutation.mutate(group.id)}>
+															<AlertDialogAction
+																onClick={() =>
+																	deleteGroupMutation.mutate(group.id)
+																}
+															>
 																Delete
 															</AlertDialogAction>
 														</AlertDialogFooter>
@@ -285,9 +340,13 @@ function StoragePage() {
 				<Card className="md:col-span-2">
 					<CardHeader className="flex flex-row items-center justify-between">
 						<div>
-							<CardTitle>{selectedGroup ? selectedGroup.name : "Nodes"}</CardTitle>
+							<CardTitle>
+								{selectedGroup ? selectedGroup.name : "Nodes"}
+							</CardTitle>
 							<CardDescription>
-								{selectedGroup ? "Storage nodes in this group" : "Select a group to manage nodes"}
+								{selectedGroup
+									? "Storage nodes in this group"
+									: "Select a group to manage nodes"}
 							</CardDescription>
 						</div>
 						{selectedGroup && (
@@ -330,25 +389,38 @@ function StoragePage() {
 											</TableCell>
 											<TableCell className="text-right">
 												<div className="flex justify-end gap-1">
-													<Button variant="ghost" size="icon-xs" onClick={() => setEditNode(node)}>
+													<Button
+														variant="ghost"
+														size="icon-xs"
+														onClick={() => setEditNode(node)}
+													>
 														<Pencil />
 													</Button>
 													<AlertDialog>
-														<AlertDialogTrigger render={
-															<Button variant="ghost" size="icon-xs">
-																<Trash />
-															</Button>
-														} />
+														<AlertDialogTrigger
+															render={
+																<Button variant="ghost" size="icon-xs">
+																	<Trash />
+																</Button>
+															}
+														/>
 														<AlertDialogContent>
 															<AlertDialogHeader>
-																<AlertDialogTitle>Remove node?</AlertDialogTitle>
+																<AlertDialogTitle>
+																	Remove node?
+																</AlertDialogTitle>
 																<AlertDialogDescription>
-																	This will remove "{node.name}" from the storage group.
+																	This will remove "{node.name}" from the
+																	storage group.
 																</AlertDialogDescription>
 															</AlertDialogHeader>
 															<AlertDialogFooter>
 																<AlertDialogCancel>Cancel</AlertDialogCancel>
-																<AlertDialogAction onClick={() => deleteNodeMutation.mutate(node.id)}>
+																<AlertDialogAction
+																	onClick={() =>
+																		deleteNodeMutation.mutate(node.id)
+																	}
+																>
 																	Remove
 																</AlertDialogAction>
 															</AlertDialogFooter>
@@ -380,7 +452,8 @@ function StoragePage() {
 						<FieldGroup>
 							<groupForm.Field name="name">
 								{(field) => {
-									const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+									const isInvalid =
+										field.state.meta.isTouched && !field.state.meta.isValid;
 									return (
 										<Field data-invalid={isInvalid}>
 											<FieldLabel htmlFor={field.name}>Name</FieldLabel>
@@ -392,7 +465,9 @@ function StoragePage() {
 												onChange={(e) => field.handleChange(e.target.value)}
 												aria-invalid={isInvalid}
 											/>
-											{isInvalid && <FieldError errors={field.state.meta.errors} />}
+											{isInvalid && (
+												<FieldError errors={field.state.meta.errors} />
+											)}
 										</Field>
 									);
 								}}
@@ -413,7 +488,13 @@ function StoragePage() {
 							</groupForm.Field>
 						</FieldGroup>
 						<DialogFooter className="mt-4">
-							<Button type="button" variant="outline" onClick={() => setCreateGroupOpen(false)}>Cancel</Button>
+							<Button
+								type="button"
+								variant="outline"
+								onClick={() => setCreateGroupOpen(false)}
+							>
+								Cancel
+							</Button>
 							<groupForm.Subscribe selector={(s) => s.isSubmitting}>
 								{(isSubmitting) => (
 									<Button type="submit" disabled={isSubmitting}>
@@ -440,7 +521,13 @@ function StoragePage() {
 					>
 						<NodeFormFields formInstance={nodeForm} />
 						<DialogFooter className="mt-4">
-							<Button type="button" variant="outline" onClick={() => setCreateNodeOpen(false)}>Cancel</Button>
+							<Button
+								type="button"
+								variant="outline"
+								onClick={() => setCreateNodeOpen(false)}
+							>
+								Cancel
+							</Button>
 							<nodeForm.Subscribe selector={(s) => s.isSubmitting}>
 								{(isSubmitting) => (
 									<Button type="submit" disabled={isSubmitting}>
@@ -467,7 +554,13 @@ function StoragePage() {
 					>
 						<NodeFormFields formInstance={editNodeForm as typeof nodeForm} />
 						<DialogFooter className="mt-4">
-							<Button type="button" variant="outline" onClick={() => setEditNode(null)}>Cancel</Button>
+							<Button
+								type="button"
+								variant="outline"
+								onClick={() => setEditNode(null)}
+							>
+								Cancel
+							</Button>
 							<editNodeForm.Subscribe selector={(s) => s.isSubmitting}>
 								{(isSubmitting) => (
 									<Button type="submit" disabled={isSubmitting}>

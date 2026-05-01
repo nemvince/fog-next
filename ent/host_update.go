@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/nemvince/fog-next/ent/agentlog"
 	"github.com/nemvince/fog-next/ent/groupmember"
 	"github.com/nemvince/fog-next/ent/host"
 	"github.com/nemvince/fog-next/ent/hostmac"
@@ -359,6 +360,21 @@ func (_u *HostUpdate) AddSnapinJobs(v ...*SnapinJob) *HostUpdate {
 	return _u.AddSnapinJobIDs(ids...)
 }
 
+// AddAgentLogIDs adds the "agent_logs" edge to the AgentLog entity by IDs.
+func (_u *HostUpdate) AddAgentLogIDs(ids ...uuid.UUID) *HostUpdate {
+	_u.mutation.AddAgentLogIDs(ids...)
+	return _u
+}
+
+// AddAgentLogs adds the "agent_logs" edges to the AgentLog entity.
+func (_u *HostUpdate) AddAgentLogs(v ...*AgentLog) *HostUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAgentLogIDs(ids...)
+}
+
 // Mutation returns the HostMutation object of the builder.
 func (_u *HostUpdate) Mutation() *HostMutation {
 	return _u.mutation
@@ -521,6 +537,27 @@ func (_u *HostUpdate) RemoveSnapinJobs(v ...*SnapinJob) *HostUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveSnapinJobIDs(ids...)
+}
+
+// ClearAgentLogs clears all "agent_logs" edges to the AgentLog entity.
+func (_u *HostUpdate) ClearAgentLogs() *HostUpdate {
+	_u.mutation.ClearAgentLogs()
+	return _u
+}
+
+// RemoveAgentLogIDs removes the "agent_logs" edge to AgentLog entities by IDs.
+func (_u *HostUpdate) RemoveAgentLogIDs(ids ...uuid.UUID) *HostUpdate {
+	_u.mutation.RemoveAgentLogIDs(ids...)
+	return _u
+}
+
+// RemoveAgentLogs removes "agent_logs" edges to AgentLog entities.
+func (_u *HostUpdate) RemoveAgentLogs(v ...*AgentLog) *HostUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAgentLogIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -996,6 +1033,51 @@ func (_u *HostUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.AgentLogsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   host.AgentLogsTable,
+			Columns: []string{host.AgentLogsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentlog.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAgentLogsIDs(); len(nodes) > 0 && !_u.mutation.AgentLogsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   host.AgentLogsTable,
+			Columns: []string{host.AgentLogsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentlog.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AgentLogsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   host.AgentLogsTable,
+			Columns: []string{host.AgentLogsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentlog.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{host.Label}
@@ -1337,6 +1419,21 @@ func (_u *HostUpdateOne) AddSnapinJobs(v ...*SnapinJob) *HostUpdateOne {
 	return _u.AddSnapinJobIDs(ids...)
 }
 
+// AddAgentLogIDs adds the "agent_logs" edge to the AgentLog entity by IDs.
+func (_u *HostUpdateOne) AddAgentLogIDs(ids ...uuid.UUID) *HostUpdateOne {
+	_u.mutation.AddAgentLogIDs(ids...)
+	return _u
+}
+
+// AddAgentLogs adds the "agent_logs" edges to the AgentLog entity.
+func (_u *HostUpdateOne) AddAgentLogs(v ...*AgentLog) *HostUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAgentLogIDs(ids...)
+}
+
 // Mutation returns the HostMutation object of the builder.
 func (_u *HostUpdateOne) Mutation() *HostMutation {
 	return _u.mutation
@@ -1499,6 +1596,27 @@ func (_u *HostUpdateOne) RemoveSnapinJobs(v ...*SnapinJob) *HostUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveSnapinJobIDs(ids...)
+}
+
+// ClearAgentLogs clears all "agent_logs" edges to the AgentLog entity.
+func (_u *HostUpdateOne) ClearAgentLogs() *HostUpdateOne {
+	_u.mutation.ClearAgentLogs()
+	return _u
+}
+
+// RemoveAgentLogIDs removes the "agent_logs" edge to AgentLog entities by IDs.
+func (_u *HostUpdateOne) RemoveAgentLogIDs(ids ...uuid.UUID) *HostUpdateOne {
+	_u.mutation.RemoveAgentLogIDs(ids...)
+	return _u
+}
+
+// RemoveAgentLogs removes "agent_logs" edges to AgentLog entities.
+func (_u *HostUpdateOne) RemoveAgentLogs(v ...*AgentLog) *HostUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAgentLogIDs(ids...)
 }
 
 // Where appends a list predicates to the HostUpdate builder.
@@ -1997,6 +2115,51 @@ func (_u *HostUpdateOne) sqlSave(ctx context.Context) (_node *Host, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(snapinjob.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.AgentLogsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   host.AgentLogsTable,
+			Columns: []string{host.AgentLogsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentlog.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAgentLogsIDs(); len(nodes) > 0 && !_u.mutation.AgentLogsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   host.AgentLogsTable,
+			Columns: []string{host.AgentLogsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentlog.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AgentLogsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   host.AgentLogsTable,
+			Columns: []string{host.AgentLogsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentlog.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

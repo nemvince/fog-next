@@ -230,3 +230,30 @@ export interface Inventory {
 	createdAt: string;
 	updatedAt: string;
 }
+
+// ─── Agent Logs ───────────────────────────────────────────────────────────────
+
+export interface AgentLog {
+	id: string;
+	taskId: string;
+	hostId: string;
+	loggedAt: string;
+	level: string;
+	message: string;
+	attrs?: Record<string, unknown>;
+	createdAt: string;
+}
+
+export interface AgentLogEntry {
+	time: string;
+	level: string;
+	msg: string;
+	attrs?: Record<string, unknown>;
+}
+
+/** Payload carried by the `agent.log` WebSocket event. */
+export interface AgentLogEvent {
+	taskId: string;
+	hostId: string;
+	entries: AgentLogEntry[];
+}

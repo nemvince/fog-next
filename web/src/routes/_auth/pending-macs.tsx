@@ -1,3 +1,8 @@
+import { Check, X } from "@phosphor-icons/react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+import { toast } from "sonner";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -35,11 +40,6 @@ import {
 } from "@/components/ui/table";
 import { api } from "@/lib/api";
 import type { Host, Paginated, PendingMAC } from "@/types";
-import { Check, X } from "@phosphor-icons/react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { toast } from "sonner";
 
 export const Route = createFileRoute("/_auth/pending-macs")({
 	component: PendingMacsPage,
@@ -52,7 +52,8 @@ function PendingMacsPage() {
 
 	const { data, isLoading } = useQuery({
 		queryKey: ["pending-macs"],
-		queryFn: () => api.get<Paginated<PendingMAC>>("/pending-macs?page=1&limit=1000"),
+		queryFn: () =>
+			api.get<Paginated<PendingMAC>>("/pending-macs?page=1&limit=1000"),
 	});
 
 	const hostsQuery = useQuery({
@@ -70,7 +71,8 @@ function PendingMacsPage() {
 			setApproveHostId("");
 			toast.success("MAC approved and assigned");
 		},
-		onError: (err) => toast.error(err instanceof Error ? err.message : "Approval failed"),
+		onError: (err) =>
+			toast.error(err instanceof Error ? err.message : "Approval failed"),
 	});
 
 	const ignoreMutation = useMutation({
@@ -79,7 +81,8 @@ function PendingMacsPage() {
 			void qc.invalidateQueries({ queryKey: ["pending-macs"] });
 			toast.success("MAC ignored");
 		},
-		onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
+		onError: (err) =>
+			toast.error(err instanceof Error ? err.message : "Failed"),
 	});
 
 	const pendingMacs = data?.data ?? [];
@@ -107,13 +110,19 @@ function PendingMacsPage() {
 					<TableBody>
 						{isLoading ? (
 							<TableRow>
-								<TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+								<TableCell
+									colSpan={4}
+									className="text-center text-muted-foreground py-8"
+								>
 									Loading…
 								</TableCell>
 							</TableRow>
 						) : pendingMacs.length === 0 ? (
 							<TableRow>
-								<TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+								<TableCell
+									colSpan={4}
+									className="text-center text-muted-foreground py-8"
+								>
 									No pending MACs
 								</TableCell>
 							</TableRow>
@@ -141,22 +150,28 @@ function PendingMacsPage() {
 												Approve
 											</Button>
 											<AlertDialog>
-												<AlertDialogTrigger render={
-													<Button variant="ghost" size="sm">
-														<X data-icon="inline-start" />
-														Ignore
-													</Button>
-												} />
+												<AlertDialogTrigger
+													render={
+														<Button variant="ghost" size="sm">
+															<X data-icon="inline-start" />
+															Ignore
+														</Button>
+													}
+												/>
 												<AlertDialogContent>
 													<AlertDialogHeader>
-														<AlertDialogTitle>Ignore MAC address?</AlertDialogTitle>
+														<AlertDialogTitle>
+															Ignore MAC address?
+														</AlertDialogTitle>
 														<AlertDialogDescription>
 															This will remove {mac.mac} from the pending list.
 														</AlertDialogDescription>
 													</AlertDialogHeader>
 													<AlertDialogFooter>
 														<AlertDialogCancel>Cancel</AlertDialogCancel>
-														<AlertDialogAction onClick={() => ignoreMutation.mutate(mac.id)}>
+														<AlertDialogAction
+															onClick={() => ignoreMutation.mutate(mac.id)}
+														>
 															Ignore
 														</AlertDialogAction>
 													</AlertDialogFooter>
@@ -172,23 +187,33 @@ function PendingMacsPage() {
 			</div>
 
 			{/* Approve Dialog */}
-			<Dialog open={!!approveTarget} onOpenChange={(o) => !o && setApproveTarget(null)}>
+			<Dialog
+				open={!!approveTarget}
+				onOpenChange={(o) => !o && setApproveTarget(null)}
+			>
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>Approve MAC Address</DialogTitle>
 					</DialogHeader>
 					<p className="text-sm text-muted-foreground">
-						Assign <span className="font-mono font-medium">{approveTarget?.mac}</span> to a host.
+						Assign{" "}
+						<span className="font-mono font-medium">{approveTarget?.mac}</span>{" "}
+						to a host.
 					</p>
 					<Field>
 						<FieldLabel>Host</FieldLabel>
-						<Select value={approveHostId} onValueChange={(v) => v !== null && setApproveHostId(v)}>
+						<Select
+							value={approveHostId}
+							onValueChange={(v) => v !== null && setApproveHostId(v)}
+						>
 							<SelectTrigger>
 								<SelectValue placeholder="Select host" />
 							</SelectTrigger>
 							<SelectContent>
 								{hosts.map((h) => (
-									<SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>
+									<SelectItem key={h.id} value={h.id}>
+										{h.name}
+									</SelectItem>
 								))}
 							</SelectContent>
 						</Select>
@@ -201,7 +226,10 @@ function PendingMacsPage() {
 							disabled={!approveHostId || approveMutation.isPending}
 							onClick={() => {
 								if (approveTarget && approveHostId) {
-									approveMutation.mutate({ id: approveTarget.id, hostId: approveHostId });
+									approveMutation.mutate({
+										id: approveTarget.id,
+										hostId: approveHostId,
+									});
 								}
 							}}
 						>

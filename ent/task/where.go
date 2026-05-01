@@ -916,6 +916,29 @@ func HasImagingLogWith(preds ...predicate.ImagingLog) predicate.Task {
 	})
 }
 
+// HasAgentLogs applies the HasEdge predicate on the "agent_logs" edge.
+func HasAgentLogs() predicate.Task {
+	return predicate.Task(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, AgentLogsTable, AgentLogsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAgentLogsWith applies the HasEdge predicate on the "agent_logs" edge with a given conditions (other predicates).
+func HasAgentLogsWith(preds ...predicate.AgentLog) predicate.Task {
+	return predicate.Task(func(s *sql.Selector) {
+		step := newAgentLogsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Task) predicate.Task {
 	return predicate.Task(sql.AndPredicates(predicates...))

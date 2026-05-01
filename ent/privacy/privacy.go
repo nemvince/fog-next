@@ -111,6 +111,30 @@ func DenyMutationOperationRule(op ent.Op) MutationRule {
 	return OnMutationOperation(rule, op)
 }
 
+// The AgentLogQueryRuleFunc type is an adapter to allow the use of ordinary
+// functions as a query rule.
+type AgentLogQueryRuleFunc func(context.Context, *ent.AgentLogQuery) error
+
+// EvalQuery return f(ctx, q).
+func (f AgentLogQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.AgentLogQuery); ok {
+		return f(ctx, q)
+	}
+	return Denyf("ent/privacy: unexpected query type %T, expect *ent.AgentLogQuery", q)
+}
+
+// The AgentLogMutationRuleFunc type is an adapter to allow the use of ordinary
+// functions as a mutation rule.
+type AgentLogMutationRuleFunc func(context.Context, *ent.AgentLogMutation) error
+
+// EvalMutation calls f(ctx, m).
+func (f AgentLogMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
+	if m, ok := m.(*ent.AgentLogMutation); ok {
+		return f(ctx, m)
+	}
+	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.AgentLogMutation", m)
+}
+
 // The AuditLogQueryRuleFunc type is an adapter to allow the use of ordinary
 // functions as a query rule.
 type AuditLogQueryRuleFunc func(context.Context, *ent.AuditLogQuery) error
@@ -794,6 +818,8 @@ var _ QueryMutationRule = FilterFunc(nil)
 
 func queryFilter(q ent.Query) (Filter, error) {
 	switch q := q.(type) {
+	case *ent.AgentLogQuery:
+		return q.Filter(), nil
 	case *ent.AuditLogQuery:
 		return q.Filter(), nil
 	case *ent.GlobalSettingQuery:
@@ -855,6 +881,8 @@ func queryFilter(q ent.Query) (Filter, error) {
 
 func mutationFilter(m ent.Mutation) (Filter, error) {
 	switch m := m.(type) {
+	case *ent.AgentLogMutation:
+		return m.Filter(), nil
 	case *ent.AuditLogMutation:
 		return m.Filter(), nil
 	case *ent.GlobalSettingMutation:

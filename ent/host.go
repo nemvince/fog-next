@@ -74,9 +74,11 @@ type HostEdges struct {
 	ImagingLogs []*ImagingLog `json:"imaging_logs,omitempty"`
 	// SnapinJobs holds the value of the snapin_jobs edge.
 	SnapinJobs []*SnapinJob `json:"snapin_jobs,omitempty"`
+	// AgentLogs holds the value of the agent_logs edge.
+	AgentLogs []*AgentLog `json:"agent_logs,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes       [9]bool
+	loadedTypes       [10]bool
 	namedMacs         map[string][]*HostMAC
 	namedPendingMacs  map[string][]*PendingMAC
 	namedGroupMembers map[string][]*GroupMember
@@ -84,6 +86,7 @@ type HostEdges struct {
 	namedTasks        map[string][]*Task
 	namedImagingLogs  map[string][]*ImagingLog
 	namedSnapinJobs   map[string][]*SnapinJob
+	namedAgentLogs    map[string][]*AgentLog
 }
 
 // ImageOrErr returns the Image value or an error if the edge
@@ -169,6 +172,15 @@ func (e HostEdges) SnapinJobsOrErr() ([]*SnapinJob, error) {
 		return e.SnapinJobs, nil
 	}
 	return nil, &NotLoadedError{edge: "snapin_jobs"}
+}
+
+// AgentLogsOrErr returns the AgentLogs value or an error if the edge
+// was not loaded in eager-loading.
+func (e HostEdges) AgentLogsOrErr() ([]*AgentLog, error) {
+	if e.loadedTypes[9] {
+		return e.AgentLogs, nil
+	}
+	return nil, &NotLoadedError{edge: "agent_logs"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -350,6 +362,11 @@ func (_m *Host) QueryImagingLogs() *ImagingLogQuery {
 // QuerySnapinJobs queries the "snapin_jobs" edge of the Host entity.
 func (_m *Host) QuerySnapinJobs() *SnapinJobQuery {
 	return NewHostClient(_m.config).QuerySnapinJobs(_m)
+}
+
+// QueryAgentLogs queries the "agent_logs" edge of the Host entity.
+func (_m *Host) QueryAgentLogs() *AgentLogQuery {
+	return NewHostClient(_m.config).QueryAgentLogs(_m)
 }
 
 // Update returns a builder for updating this Host.
@@ -591,6 +608,30 @@ func (_m *Host) appendNamedSnapinJobs(name string, edges ...*SnapinJob) {
 		_m.Edges.namedSnapinJobs[name] = []*SnapinJob{}
 	} else {
 		_m.Edges.namedSnapinJobs[name] = append(_m.Edges.namedSnapinJobs[name], edges...)
+	}
+}
+
+// NamedAgentLogs returns the AgentLogs named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (_m *Host) NamedAgentLogs(name string) ([]*AgentLog, error) {
+	if _m.Edges.namedAgentLogs == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := _m.Edges.namedAgentLogs[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (_m *Host) appendNamedAgentLogs(name string, edges ...*AgentLog) {
+	if _m.Edges.namedAgentLogs == nil {
+		_m.Edges.namedAgentLogs = make(map[string][]*AgentLog)
+	}
+	if len(edges) == 0 {
+		_m.Edges.namedAgentLogs[name] = []*AgentLog{}
+	} else {
+		_m.Edges.namedAgentLogs[name] = append(_m.Edges.namedAgentLogs[name], edges...)
 	}
 }
 

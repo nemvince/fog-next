@@ -1,3 +1,16 @@
+import { Plus, X } from "@phosphor-icons/react";
+import { useForm } from "@tanstack/react-form";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import {
+	createColumnHelper,
+	flexRender,
+	getCoreRowModel,
+	useReactTable,
+} from "@tanstack/react-table";
+import { useState } from "react";
+import { toast } from "sonner";
+import * as z from "zod";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -45,19 +58,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useServerEvents } from "@/hooks/useServerEvents";
 import { api } from "@/lib/api";
 import type { Host, Image, Paginated, Task } from "@/types";
-import { Plus, X } from "@phosphor-icons/react";
-import { useForm } from "@tanstack/react-form";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import {
-	createColumnHelper,
-	flexRender,
-	getCoreRowModel,
-	useReactTable,
-} from "@tanstack/react-table";
-import { useState } from "react";
-import { toast } from "sonner";
-import * as z from "zod";
 
 export const Route = createFileRoute("/_auth/tasks")({
 	component: TasksPage,
@@ -76,7 +76,13 @@ const TASK_TYPES = [
 
 type TaskType = (typeof TASK_TYPES)[number];
 
-const IMAGE_TASK_TYPES: TaskType[] = ["deploy", "capture", "debug_deploy", "debug_capture", "multicast"];
+const IMAGE_TASK_TYPES: TaskType[] = [
+	"deploy",
+	"capture",
+	"debug_deploy",
+	"debug_capture",
+	"multicast",
+];
 
 const taskSchema = z.object({
 	type: z.enum(TASK_TYPES, { message: "Task type is required" }),
@@ -90,12 +96,18 @@ const col = createColumnHelper<Task>();
 
 function taskStateColor(state: string) {
 	switch (state) {
-		case "active": return "default";
-		case "queued": return "secondary";
-		case "complete": return "outline";
-		case "failed": return "destructive";
-		case "canceled": return "secondary";
-		default: return "secondary";
+		case "active":
+			return "default";
+		case "queued":
+			return "secondary";
+		case "complete":
+			return "outline";
+		case "failed":
+			return "destructive";
+		case "canceled":
+			return "secondary";
+		default:
+			return "secondary";
 	}
 }
 
@@ -103,7 +115,19 @@ const columns = [
 	col.accessor("type", { header: "Type" }),
 	col.accessor("state", {
 		header: "State",
-		cell: (info) => <Badge variant={taskStateColor(info.getValue()) as "default" | "secondary" | "outline" | "destructive"}>{info.getValue()}</Badge>,
+		cell: (info) => (
+			<Badge
+				variant={
+					taskStateColor(info.getValue()) as
+						| "default"
+						| "secondary"
+						| "outline"
+						| "destructive"
+				}
+			>
+				{info.getValue()}
+			</Badge>
+		),
 	}),
 	col.accessor("hostId", { header: "Host ID" }),
 	col.accessor("percentComplete", {
@@ -132,11 +156,15 @@ function TaskTable({
 	});
 
 	if (isLoading) {
-		return <div className="py-8 text-center text-muted-foreground">Loading…</div>;
+		return (
+			<div className="py-8 text-center text-muted-foreground">Loading…</div>
+		);
 	}
 
 	if (tasks.length === 0) {
-		return <div className="py-8 text-center text-muted-foreground">No tasks</div>;
+		return (
+			<div className="py-8 text-center text-muted-foreground">No tasks</div>
+		);
 	}
 
 	return (
@@ -146,7 +174,9 @@ function TaskTable({
 					{table.getHeaderGroups().map((hg) => (
 						<TableRow key={hg.id}>
 							{hg.headers.map((h) => (
-								<TableHead key={h.id}>{flexRender(h.column.columnDef.header, h.getContext())}</TableHead>
+								<TableHead key={h.id}>
+									{flexRender(h.column.columnDef.header, h.getContext())}
+								</TableHead>
 							))}
 							<TableHead />
 						</TableRow>
@@ -156,16 +186,20 @@ function TaskTable({
 					{table.getRowModel().rows.map((row) => (
 						<TableRow key={row.id}>
 							{row.getVisibleCells().map((cell) => (
-								<TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+								<TableCell key={cell.id}>
+									{flexRender(cell.column.columnDef.cell, cell.getContext())}
+								</TableCell>
 							))}
 							<TableCell className="text-right">
 								{["active", "queued"].includes(row.original.state) && (
 									<AlertDialog>
-										<AlertDialogTrigger render={
-											<Button variant="ghost" size="icon-xs">
-												<X />
-											</Button>
-										} />
+										<AlertDialogTrigger
+											render={
+												<Button variant="ghost" size="icon-xs">
+													<X />
+												</Button>
+											}
+										/>
 										<AlertDialogContent>
 											<AlertDialogHeader>
 												<AlertDialogTitle>Cancel task?</AlertDialogTitle>
@@ -175,7 +209,9 @@ function TaskTable({
 											</AlertDialogHeader>
 											<AlertDialogFooter>
 												<AlertDialogCancel>Keep</AlertDialogCancel>
-												<AlertDialogAction onClick={() => onCancel(row.original.id)}>
+												<AlertDialogAction
+													onClick={() => onCancel(row.original.id)}
+												>
 													Cancel Task
 												</AlertDialogAction>
 											</AlertDialogFooter>
@@ -215,13 +251,17 @@ function TasksPage() {
 
 	const createMutation = useMutation({
 		mutationFn: (values: z.infer<typeof taskSchema>) =>
-			api.post<Task>("/tasks", { ...values, imageId: values.imageId || undefined }),
+			api.post<Task>("/tasks", {
+				...values,
+				imageId: values.imageId || undefined,
+			}),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: ["tasks"] });
 			setOpen(false);
 			toast.success("Task created");
 		},
-		onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
+		onError: (err) =>
+			toast.error(err instanceof Error ? err.message : "Failed"),
 	});
 
 	const cancelMutation = useMutation({
@@ -230,7 +270,8 @@ function TasksPage() {
 			void qc.invalidateQueries({ queryKey: ["tasks"] });
 			toast.success("Task cancelled");
 		},
-		onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
+		onError: (err) =>
+			toast.error(err instanceof Error ? err.message : "Failed"),
 	});
 
 	const form = useForm({
@@ -248,14 +289,18 @@ function TasksPage() {
 	const allTasks = tasksQuery.data?.data ?? [];
 	const activeTasks = allTasks.filter((t) => t.state === "active");
 	const queuedTasks = allTasks.filter((t) => t.state === "queued");
-	const historyTasks = allTasks.filter((t) => ["complete", "failed", "canceled"].includes(t.state));
+	const historyTasks = allTasks.filter((t) =>
+		["complete", "failed", "canceled"].includes(t.state),
+	);
 
 	return (
 		<div className="flex flex-col gap-6">
 			<div className="flex items-center justify-between">
 				<div>
 					<h1 className="text-2xl font-bold">Tasks</h1>
-					<p className="text-muted-foreground">Manage imaging and maintenance tasks</p>
+					<p className="text-muted-foreground">
+						Manage imaging and maintenance tasks
+					</p>
 				</div>
 				<Button onClick={() => setOpen(true)}>
 					<Plus data-icon="inline-start" />
@@ -265,24 +310,47 @@ function TasksPage() {
 
 			<Tabs defaultValue="active">
 				<TabsList>
-					<TabsTrigger value="active">Active ({activeTasks.length})</TabsTrigger>
-					<TabsTrigger value="queued">Queued ({queuedTasks.length})</TabsTrigger>
-					<TabsTrigger value="history">History ({historyTasks.length})</TabsTrigger>
+					<TabsTrigger value="active">
+						Active ({activeTasks.length})
+					</TabsTrigger>
+					<TabsTrigger value="queued">
+						Queued ({queuedTasks.length})
+					</TabsTrigger>
+					<TabsTrigger value="history">
+						History ({historyTasks.length})
+					</TabsTrigger>
 				</TabsList>
 				<TabsContent value="active">
-					<TaskTable tasks={activeTasks} isLoading={tasksQuery.isLoading} onCancel={(id) => cancelMutation.mutate(id)} />
+					<TaskTable
+						tasks={activeTasks}
+						isLoading={tasksQuery.isLoading}
+						onCancel={(id) => cancelMutation.mutate(id)}
+					/>
 				</TabsContent>
 				<TabsContent value="queued">
-					<TaskTable tasks={queuedTasks} isLoading={tasksQuery.isLoading} onCancel={(id) => cancelMutation.mutate(id)} />
+					<TaskTable
+						tasks={queuedTasks}
+						isLoading={tasksQuery.isLoading}
+						onCancel={(id) => cancelMutation.mutate(id)}
+					/>
 				</TabsContent>
 				<TabsContent value="history">
-					<TaskTable tasks={historyTasks} isLoading={tasksQuery.isLoading} onCancel={() => {}} />
+					<TaskTable
+						tasks={historyTasks}
+						isLoading={tasksQuery.isLoading}
+						onCancel={() => {}}
+					/>
 				</TabsContent>
 			</Tabs>
 
 			{tasksQuery.data && tasksQuery.data.total > 50 && (
 				<div className="flex items-center justify-end gap-2">
-					<Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+					<Button
+						variant="outline"
+						size="sm"
+						disabled={page <= 1}
+						onClick={() => setPage((p) => p - 1)}
+					>
 						Previous
 					</Button>
 					<span className="text-sm text-muted-foreground">Page {page}</span>
@@ -311,21 +379,29 @@ function TasksPage() {
 						<FieldGroup>
 							<form.Field name="type">
 								{(field) => {
-									const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+									const isInvalid =
+										field.state.meta.isTouched && !field.state.meta.isValid;
 									return (
 										<Field data-invalid={isInvalid}>
 											<FieldLabel>Task Type</FieldLabel>
-											<Select value={field.state.value} onValueChange={(v) => field.handleChange(v as TaskType)}>
+											<Select
+												value={field.state.value}
+												onValueChange={(v) => field.handleChange(v as TaskType)}
+											>
 												<SelectTrigger aria-invalid={isInvalid}>
 													<SelectValue placeholder="Select type" />
 												</SelectTrigger>
 												<SelectContent>
 													{TASK_TYPES.map((t) => (
-														<SelectItem key={t} value={t}>{t}</SelectItem>
+														<SelectItem key={t} value={t}>
+															{t}
+														</SelectItem>
 													))}
 												</SelectContent>
 											</Select>
-											{isInvalid && <FieldError errors={field.state.meta.errors} />}
+											{isInvalid && (
+												<FieldError errors={field.state.meta.errors} />
+											)}
 										</Field>
 									);
 								}}
@@ -333,21 +409,31 @@ function TasksPage() {
 
 							<form.Field name="hostId">
 								{(field) => {
-									const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+									const isInvalid =
+										field.state.meta.isTouched && !field.state.meta.isValid;
 									return (
 										<Field data-invalid={isInvalid}>
 											<FieldLabel>Host</FieldLabel>
-											<Select value={field.state.value} onValueChange={(v) => v !== null && field.handleChange(v)}>
+											<Select
+												value={field.state.value}
+												onValueChange={(v) =>
+													v !== null && field.handleChange(v)
+												}
+											>
 												<SelectTrigger aria-invalid={isInvalid}>
 													<SelectValue placeholder="Select host" />
 												</SelectTrigger>
 												<SelectContent>
 													{hostsQuery.data?.data.map((h) => (
-														<SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>
+														<SelectItem key={h.id} value={h.id}>
+															{h.name}
+														</SelectItem>
 													))}
 												</SelectContent>
 											</Select>
-											{isInvalid && <FieldError errors={field.state.meta.errors} />}
+											{isInvalid && (
+												<FieldError errors={field.state.meta.errors} />
+											)}
 										</Field>
 									);
 								}}
@@ -360,13 +446,20 @@ function TasksPage() {
 											{(field) => (
 												<Field>
 													<FieldLabel>Image</FieldLabel>
-													<Select value={field.state.value} onValueChange={(v) => v !== null && field.handleChange(v)}>
+													<Select
+														value={field.state.value}
+														onValueChange={(v) =>
+															v !== null && field.handleChange(v)
+														}
+													>
 														<SelectTrigger>
 															<SelectValue placeholder="Select image" />
 														</SelectTrigger>
 														<SelectContent>
 															{imagesQuery.data?.data.map((img) => (
-																<SelectItem key={img.id} value={img.id}>{img.name}</SelectItem>
+																<SelectItem key={img.id} value={img.id}>
+																	{img.name}
+																</SelectItem>
 															))}
 														</SelectContent>
 													</Select>
@@ -387,7 +480,9 @@ function TasksPage() {
 										{(field) => (
 											<Field orientation="horizontal">
 												<FieldContent>
-													<FieldLabel htmlFor={field.name}>{labels[fieldName]}</FieldLabel>
+													<FieldLabel htmlFor={field.name}>
+														{labels[fieldName]}
+													</FieldLabel>
 												</FieldContent>
 												<Switch
 													id={field.name}
@@ -401,7 +496,11 @@ function TasksPage() {
 							})}
 						</FieldGroup>
 						<DialogFooter className="mt-4">
-							<Button type="button" variant="outline" onClick={() => setOpen(false)}>
+							<Button
+								type="button"
+								variant="outline"
+								onClick={() => setOpen(false)}
+							>
 								Cancel
 							</Button>
 							<form.Subscribe selector={(s) => s.isSubmitting}>

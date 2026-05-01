@@ -79,9 +79,12 @@ type TaskEdges struct {
 	StorageGroup *StorageGroup `json:"storage_group,omitempty"`
 	// ImagingLog holds the value of the imaging_log edge.
 	ImagingLog *ImagingLog `json:"imaging_log,omitempty"`
+	// AgentLogs holds the value of the agent_logs edge.
+	AgentLogs []*AgentLog `json:"agent_logs,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [5]bool
+	loadedTypes    [6]bool
+	namedAgentLogs map[string][]*AgentLog
 }
 
 // HostOrErr returns the Host value or an error if the edge
@@ -137,6 +140,15 @@ func (e TaskEdges) ImagingLogOrErr() (*ImagingLog, error) {
 		return nil, &NotFoundError{label: imaginglog.Label}
 	}
 	return nil, &NotLoadedError{edge: "imaging_log"}
+}
+
+// AgentLogsOrErr returns the AgentLogs value or an error if the edge
+// was not loaded in eager-loading.
+func (e TaskEdges) AgentLogsOrErr() ([]*AgentLog, error) {
+	if e.loadedTypes[5] {
+		return e.AgentLogs, nil
+	}
+	return nil, &NotLoadedError{edge: "agent_logs"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -335,6 +347,11 @@ func (_m *Task) QueryImagingLog() *ImagingLogQuery {
 	return NewTaskClient(_m.config).QueryImagingLog(_m)
 }
 
+// QueryAgentLogs queries the "agent_logs" edge of the Task entity.
+func (_m *Task) QueryAgentLogs() *AgentLogQuery {
+	return NewTaskClient(_m.config).QueryAgentLogs(_m)
+}
+
 // Update returns a builder for updating this Task.
 // Note that you need to call Task.Unwrap() before calling this method if this Task
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -428,6 +445,30 @@ func (_m *Task) String() string {
 	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
 	builder.WriteByte(')')
 	return builder.String()
+}
+
+// NamedAgentLogs returns the AgentLogs named value or an error if the edge was not
+// loaded in eager-loading with this name.
+func (_m *Task) NamedAgentLogs(name string) ([]*AgentLog, error) {
+	if _m.Edges.namedAgentLogs == nil {
+		return nil, &NotLoadedError{edge: name}
+	}
+	nodes, ok := _m.Edges.namedAgentLogs[name]
+	if !ok {
+		return nil, &NotLoadedError{edge: name}
+	}
+	return nodes, nil
+}
+
+func (_m *Task) appendNamedAgentLogs(name string, edges ...*AgentLog) {
+	if _m.Edges.namedAgentLogs == nil {
+		_m.Edges.namedAgentLogs = make(map[string][]*AgentLog)
+	}
+	if len(edges) == 0 {
+		_m.Edges.namedAgentLogs[name] = []*AgentLog{}
+	} else {
+		_m.Edges.namedAgentLogs[name] = append(_m.Edges.namedAgentLogs[name], edges...)
+	}
 }
 
 // Tasks is a parsable slice of Task.

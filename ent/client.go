@@ -16,6 +16,7 @@ import (
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/nemvince/fog-next/ent/agentlog"
 	"github.com/nemvince/fog-next/ent/auditlog"
 	"github.com/nemvince/fog-next/ent/globalsetting"
 	"github.com/nemvince/fog-next/ent/group"
@@ -52,6 +53,8 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
+	// AgentLog is the client for interacting with the AgentLog builders.
+	AgentLog *AgentLogClient
 	// AuditLog is the client for interacting with the AuditLog builders.
 	AuditLog *AuditLogClient
 	// GlobalSetting is the client for interacting with the GlobalSetting builders.
@@ -117,6 +120,7 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
+	c.AgentLog = NewAgentLogClient(c.config)
 	c.AuditLog = NewAuditLogClient(c.config)
 	c.GlobalSetting = NewGlobalSettingClient(c.config)
 	c.Group = NewGroupClient(c.config)
@@ -236,6 +240,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	return &Tx{
 		ctx:              ctx,
 		config:           cfg,
+		AgentLog:         NewAgentLogClient(cfg),
 		AuditLog:         NewAuditLogClient(cfg),
 		GlobalSetting:    NewGlobalSettingClient(cfg),
 		Group:            NewGroupClient(cfg),
@@ -282,6 +287,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	return &Tx{
 		ctx:              ctx,
 		config:           cfg,
+		AgentLog:         NewAgentLogClient(cfg),
 		AuditLog:         NewAuditLogClient(cfg),
 		GlobalSetting:    NewGlobalSettingClient(cfg),
 		Group:            NewGroupClient(cfg),
@@ -315,7 +321,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		AuditLog.
+//		AgentLog.
 //		Query().
 //		Count(ctx)
 func (c *Client) Debug() *Client {
@@ -338,11 +344,11 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.AuditLog, c.GlobalSetting, c.Group, c.GroupMember, c.Host, c.HostMAC, c.Image,
-		c.ImageType, c.ImagingLog, c.Inventory, c.Module, c.ModuleStatus,
-		c.MulticastSession, c.OSType, c.PendingMAC, c.Printer, c.PrinterAssoc,
-		c.RefreshToken, c.ScheduledTask, c.Snapin, c.SnapinAssoc, c.SnapinJob,
-		c.SnapinTask, c.StorageGroup, c.StorageNode, c.Task, c.User,
+		c.AgentLog, c.AuditLog, c.GlobalSetting, c.Group, c.GroupMember, c.Host,
+		c.HostMAC, c.Image, c.ImageType, c.ImagingLog, c.Inventory, c.Module,
+		c.ModuleStatus, c.MulticastSession, c.OSType, c.PendingMAC, c.Printer,
+		c.PrinterAssoc, c.RefreshToken, c.ScheduledTask, c.Snapin, c.SnapinAssoc,
+		c.SnapinJob, c.SnapinTask, c.StorageGroup, c.StorageNode, c.Task, c.User,
 	} {
 		n.Use(hooks...)
 	}
@@ -352,11 +358,11 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.AuditLog, c.GlobalSetting, c.Group, c.GroupMember, c.Host, c.HostMAC, c.Image,
-		c.ImageType, c.ImagingLog, c.Inventory, c.Module, c.ModuleStatus,
-		c.MulticastSession, c.OSType, c.PendingMAC, c.Printer, c.PrinterAssoc,
-		c.RefreshToken, c.ScheduledTask, c.Snapin, c.SnapinAssoc, c.SnapinJob,
-		c.SnapinTask, c.StorageGroup, c.StorageNode, c.Task, c.User,
+		c.AgentLog, c.AuditLog, c.GlobalSetting, c.Group, c.GroupMember, c.Host,
+		c.HostMAC, c.Image, c.ImageType, c.ImagingLog, c.Inventory, c.Module,
+		c.ModuleStatus, c.MulticastSession, c.OSType, c.PendingMAC, c.Printer,
+		c.PrinterAssoc, c.RefreshToken, c.ScheduledTask, c.Snapin, c.SnapinAssoc,
+		c.SnapinJob, c.SnapinTask, c.StorageGroup, c.StorageNode, c.Task, c.User,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -365,6 +371,8 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 // Mutate implements the ent.Mutator interface.
 func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
+	case *AgentLogMutation:
+		return c.AgentLog.mutate(ctx, m)
 	case *AuditLogMutation:
 		return c.AuditLog.mutate(ctx, m)
 	case *GlobalSettingMutation:
@@ -421,6 +429,171 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.User.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
+	}
+}
+
+// AgentLogClient is a client for the AgentLog schema.
+type AgentLogClient struct {
+	config
+}
+
+// NewAgentLogClient returns a client for the AgentLog from the given config.
+func NewAgentLogClient(c config) *AgentLogClient {
+	return &AgentLogClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `agentlog.Hooks(f(g(h())))`.
+func (c *AgentLogClient) Use(hooks ...Hook) {
+	c.hooks.AgentLog = append(c.hooks.AgentLog, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `agentlog.Intercept(f(g(h())))`.
+func (c *AgentLogClient) Intercept(interceptors ...Interceptor) {
+	c.inters.AgentLog = append(c.inters.AgentLog, interceptors...)
+}
+
+// Create returns a builder for creating a AgentLog entity.
+func (c *AgentLogClient) Create() *AgentLogCreate {
+	mutation := newAgentLogMutation(c.config, OpCreate)
+	return &AgentLogCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of AgentLog entities.
+func (c *AgentLogClient) CreateBulk(builders ...*AgentLogCreate) *AgentLogCreateBulk {
+	return &AgentLogCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *AgentLogClient) MapCreateBulk(slice any, setFunc func(*AgentLogCreate, int)) *AgentLogCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &AgentLogCreateBulk{err: fmt.Errorf("calling to AgentLogClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*AgentLogCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &AgentLogCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for AgentLog.
+func (c *AgentLogClient) Update() *AgentLogUpdate {
+	mutation := newAgentLogMutation(c.config, OpUpdate)
+	return &AgentLogUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *AgentLogClient) UpdateOne(_m *AgentLog) *AgentLogUpdateOne {
+	mutation := newAgentLogMutation(c.config, OpUpdateOne, withAgentLog(_m))
+	return &AgentLogUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *AgentLogClient) UpdateOneID(id uuid.UUID) *AgentLogUpdateOne {
+	mutation := newAgentLogMutation(c.config, OpUpdateOne, withAgentLogID(id))
+	return &AgentLogUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for AgentLog.
+func (c *AgentLogClient) Delete() *AgentLogDelete {
+	mutation := newAgentLogMutation(c.config, OpDelete)
+	return &AgentLogDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *AgentLogClient) DeleteOne(_m *AgentLog) *AgentLogDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *AgentLogClient) DeleteOneID(id uuid.UUID) *AgentLogDeleteOne {
+	builder := c.Delete().Where(agentlog.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &AgentLogDeleteOne{builder}
+}
+
+// Query returns a query builder for AgentLog.
+func (c *AgentLogClient) Query() *AgentLogQuery {
+	return &AgentLogQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeAgentLog},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a AgentLog entity by its id.
+func (c *AgentLogClient) Get(ctx context.Context, id uuid.UUID) (*AgentLog, error) {
+	return c.Query().Where(agentlog.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *AgentLogClient) GetX(ctx context.Context, id uuid.UUID) *AgentLog {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryTask queries the task edge of a AgentLog.
+func (c *AgentLogClient) QueryTask(_m *AgentLog) *TaskQuery {
+	query := (&TaskClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(agentlog.Table, agentlog.FieldID, id),
+			sqlgraph.To(task.Table, task.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, agentlog.TaskTable, agentlog.TaskColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryHost queries the host edge of a AgentLog.
+func (c *AgentLogClient) QueryHost(_m *AgentLog) *HostQuery {
+	query := (&HostClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(agentlog.Table, agentlog.FieldID, id),
+			sqlgraph.To(host.Table, host.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, agentlog.HostTable, agentlog.HostColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *AgentLogClient) Hooks() []Hook {
+	return c.hooks.AgentLog
+}
+
+// Interceptors returns the client interceptors.
+func (c *AgentLogClient) Interceptors() []Interceptor {
+	return c.inters.AgentLog
+}
+
+func (c *AgentLogClient) mutate(ctx context.Context, m *AgentLogMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&AgentLogCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&AgentLogUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&AgentLogUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&AgentLogDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown AgentLog mutation op: %q", m.Op())
 	}
 }
 
@@ -1265,6 +1438,22 @@ func (c *HostClient) QuerySnapinJobs(_m *Host) *SnapinJobQuery {
 			sqlgraph.From(host.Table, host.FieldID, id),
 			sqlgraph.To(snapinjob.Table, snapinjob.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, host.SnapinJobsTable, host.SnapinJobsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryAgentLogs queries the agent_logs edge of a Host.
+func (c *HostClient) QueryAgentLogs(_m *Host) *AgentLogQuery {
+	query := (&AgentLogClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(host.Table, host.FieldID, id),
+			sqlgraph.To(agentlog.Table, agentlog.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, host.AgentLogsTable, host.AgentLogsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -4721,6 +4910,22 @@ func (c *TaskClient) QueryImagingLog(_m *Task) *ImagingLogQuery {
 	return query
 }
 
+// QueryAgentLogs queries the agent_logs edge of a Task.
+func (c *TaskClient) QueryAgentLogs(_m *Task) *AgentLogQuery {
+	query := (&AgentLogClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(task.Table, task.FieldID, id),
+			sqlgraph.To(agentlog.Table, agentlog.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, task.AgentLogsTable, task.AgentLogsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *TaskClient) Hooks() []Hook {
 	return c.hooks.Task
@@ -4914,16 +5119,16 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		AuditLog, GlobalSetting, Group, GroupMember, Host, HostMAC, Image, ImageType,
-		ImagingLog, Inventory, Module, ModuleStatus, MulticastSession, OSType,
-		PendingMAC, Printer, PrinterAssoc, RefreshToken, ScheduledTask, Snapin,
+		AgentLog, AuditLog, GlobalSetting, Group, GroupMember, Host, HostMAC, Image,
+		ImageType, ImagingLog, Inventory, Module, ModuleStatus, MulticastSession,
+		OSType, PendingMAC, Printer, PrinterAssoc, RefreshToken, ScheduledTask, Snapin,
 		SnapinAssoc, SnapinJob, SnapinTask, StorageGroup, StorageNode, Task,
 		User []ent.Hook
 	}
 	inters struct {
-		AuditLog, GlobalSetting, Group, GroupMember, Host, HostMAC, Image, ImageType,
-		ImagingLog, Inventory, Module, ModuleStatus, MulticastSession, OSType,
-		PendingMAC, Printer, PrinterAssoc, RefreshToken, ScheduledTask, Snapin,
+		AgentLog, AuditLog, GlobalSetting, Group, GroupMember, Host, HostMAC, Image,
+		ImageType, ImagingLog, Inventory, Module, ModuleStatus, MulticastSession,
+		OSType, PendingMAC, Printer, PrinterAssoc, RefreshToken, ScheduledTask, Snapin,
 		SnapinAssoc, SnapinJob, SnapinTask, StorageGroup, StorageNode, Task,
 		User []ent.Interceptor
 	}

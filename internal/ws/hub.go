@@ -23,6 +23,7 @@ const (
 	EventTaskCanceled EventType = "task.canceled"
 	EventHostOnline   EventType = "host.online"
 	EventHostOffline  EventType = "host.offline"
+	EventAgentLog     EventType = "agent.log"
 )
 
 // Event is the JSON payload sent to connected clients.

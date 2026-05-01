@@ -18,6 +18,7 @@ declare module "@tanstack/react-router" {
 }
 
 // Render the app
+// biome-ignore lint/style/noNonNullAssertion: root element is guaranteed to exist in index.html
 const rootElement = document.getElementById("root")!;
 if (!rootElement.innerHTML) {
 	const root = ReactDOM.createRoot(rootElement);

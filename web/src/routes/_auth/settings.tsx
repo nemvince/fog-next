@@ -1,18 +1,13 @@
-import { Button } from "@/components/ui/button";
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { api } from "@/lib/api";
-import type { GlobalSetting } from "@/types";
 import { Check } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { api } from "@/lib/api";
+import type { GlobalSetting } from "@/types";
 
 export const Route = createFileRoute("/_auth/settings")({
 	component: SettingsPage,
@@ -23,12 +18,14 @@ function SettingRow({ setting }: { setting: GlobalSetting }) {
 	const [value, setValue] = useState(setting.value);
 
 	const mutation = useMutation({
-		mutationFn: () => api.put<GlobalSetting>(`/settings/${setting.key}`, { value }),
+		mutationFn: () =>
+			api.put<GlobalSetting>(`/settings/${setting.key}`, { value }),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: ["settings"] });
 			toast.success(`Saved "${setting.key}"`);
 		},
-		onError: (err) => toast.error(err instanceof Error ? err.message : "Save failed"),
+		onError: (err) =>
+			toast.error(err instanceof Error ? err.message : "Save failed"),
 	});
 
 	const dirty = value !== setting.value;
@@ -36,7 +33,10 @@ function SettingRow({ setting }: { setting: GlobalSetting }) {
 	return (
 		<div className="flex items-end gap-2">
 			<div className="flex-1">
-				<label className="text-sm font-medium" htmlFor={`setting-${setting.key}`}>
+				<label
+					className="text-sm font-medium"
+					htmlFor={`setting-${setting.key}`}
+				>
 					{setting.description || setting.key}
 				</label>
 				<Input
